@@ -12,7 +12,7 @@ type WinModel = {
   maximized: boolean;
 };
 
-type ResumeWindowProps = {
+type HobbiesWindowProps = {
   win: WinModel;
   desktopConstraintsRef: RefObject<HTMLDivElement | null>;
   onFocus: () => void;
@@ -76,7 +76,56 @@ function ButtonBevel({
   );
 }
 
-export default function ResumeWindow({
+function FolderIcon24() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 32 32" shapeRendering="crispEdges">
+      <rect x="1" y="7" width="28" height="24" fill="#FFCC00" stroke="#000000" strokeWidth="1" />
+      <rect x="4" y="4" width="14" height="5" fill="#FFCC00" stroke="#000000" strokeWidth="1" />
+      <rect x="2" y="8" width="26" height="1" fill="#E6A800" />
+      <rect x="3" y="9" width="11" height="6" fill="#FFE566" />
+    </svg>
+  );
+}
+
+function PhotoPlaceholderIcon() {
+  return (
+    <svg width="34" height="26" viewBox="0 0 34 26" shapeRendering="crispEdges">
+      <rect x="1" y="1" width="32" height="24" fill="none" stroke="#A0A0A0" strokeWidth="1" />
+      <polygon points="25,6 29,6 29,10" fill="#A0A0A0" />
+      <polygon points="4,21 12,13 17,18 21,14 30,21" fill="#A0A0A0" />
+    </svg>
+  );
+}
+
+const HOBBIES = [
+  {
+    name: "photography",
+    subtitle: "capturing things",
+    detail: "street, nature, anything that looks interesting. (@joofpics on instagram)",
+  },
+  {
+    name: "the gym",
+    subtitle: "staying healthy",
+    detail: "not a science based lifter (sorry not sorry)",
+  },
+  {
+    name: "piano",
+    subtitle: "making noise on purpose",
+    detail: "self taught, not very good but i try to have fun",
+  },
+  {
+    name: "sports",
+    subtitle: "toronto everything, basketball always",
+    detail: "avid toronto raptors jamal shead fan",
+  },
+  {
+    name: "building things",
+    subtitle: "i like to make fun stuff",
+    detail: "a lot of unfinished projects haha",
+  },
+] as const;
+
+export default function HobbiesWindow({
   win,
   desktopConstraintsRef,
   onFocus,
@@ -84,7 +133,7 @@ export default function ResumeWindow({
   onMinimize,
   onMaximize,
   onMove,
-}: ResumeWindowProps) {
+}: HobbiesWindowProps) {
   const dragControls = useDragControls();
   const [pressed, setPressed] = useState<null | "min" | "max" | "close">(null);
 
@@ -106,8 +155,6 @@ export default function ResumeWindow({
     }),
     [win.position.x, win.position.y, win.size.width, win.size.height, win.zIndex]
   );
-
-  const headerHeight = 112;
 
   return (
     <motion.div
@@ -183,7 +230,7 @@ export default function ResumeWindow({
               paddingTop: 1,
             }}
           >
-            resume.pdf
+            hobbies
           </div>
           <div style={{ display: "flex", flex: "0 0 auto" }}>
             <div
@@ -258,19 +305,15 @@ export default function ResumeWindow({
             onFocus();
           }}
         >
-          <div style={{ paddingRight: 12 }}>File</div>
-          <div style={{ paddingRight: 12 }}>Edit</div>
-          <div style={{ paddingRight: 12 }}>View</div>
-          <div style={{ paddingRight: 12 }}>Help</div>
+          <div style={{ paddingRight: 12 }}>file</div>
+          <div style={{ paddingRight: 12 }}>edit</div>
+          <div style={{ paddingRight: 12 }}>view</div>
+          <div style={{ paddingRight: 12 }}>help</div>
         </div>
 
         <div
           style={{
             flex: "1 1 auto",
-            height: "100%",
-            minHeight: 0,
-            display: "flex",
-            flexDirection: "column",
             backgroundColor: "#FFFFFF",
             borderTop: "1px solid #808080",
             borderLeft: "1px solid #808080",
@@ -286,89 +329,134 @@ export default function ResumeWindow({
         >
           <div
             style={{
-              background: "#C0C0C0",
-              borderBottom: "1px solid #808080",
-              padding: "4px 8px",
-              boxSizing: "border-box",
-              height: headerHeight,
-              flexShrink: 0,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              <div
-                style={{
-                  fontFamily,
-                  fontSize: 18,
-                  color: "#000000",
-                  lineHeight: "18px",
-                  marginRight: 6,
-                }}
-              >
-                ☻
-              </div>
-              <div
-                style={{
-                  fontFamily,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: "#000000",
-                  lineHeight: "14px",
-                }}
-              >
-                My Resume!
-              </div>
-            </div>
-            <div
-              style={{
-                fontFamily,
-                fontSize: 10,
-                color: "#555555",
-                lineHeight: "12px",
-              }}
-            >
-              Joshua Offman — Mechanical Engineer
-            </div>
-            <div
-              style={{
-                fontFamily,
-                fontSize: 10,
-                color: "#555555",
-                lineHeight: "12px",
-              }}
-            >
-              Offman_Joshua_Resume.pdf   |   Ready
-            </div>
-          </div>
-
-          <object
-            data="/Offman_Joshua_Resume.pdf"
-            type="application/pdf"
-            style={{
-              flex: 1,
-              minHeight: 0,
               width: "100%",
               height: "100%",
-              border: 0,
-              display: "block",
+              background: "#FFFFFF",
+              padding: 12,
+              boxSizing: "border-box",
+              overflowY: "auto",
+              fontFamily,
             }}
           >
-            <a
-              href="/Offman_Joshua_Resume.pdf"
-              download
+            <div
               style={{
+                background: "#C0C0C0",
+                borderBottom: "1px solid #808080",
+                padding: "4px 8px",
                 fontFamily,
-                fontSize: 11,
-                color: "#000000",
+                fontSize: 10,
+                color: "#555555",
+                lineHeight: "12px",
               }}
             >
-              Click here to download resume
-            </a>
-          </object>
+              c:\hobbies\index — 5 items found
+            </div>
+
+            {HOBBIES.map((hobby) => (
+              <div
+                key={hobby.name}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "10px 8px",
+                  borderBottom: "1px solid #E0E0E0",
+                }}
+              >
+                <div
+                  style={{
+                    width: 180,
+                    flexShrink: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                  }}
+                >
+                  <FolderIcon24 />
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontFamily,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "#000000",
+                      lineHeight: "13px",
+                      textTransform: "lowercase",
+                    }}
+                  >
+                    {hobby.name}
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 2,
+                      fontFamily,
+                      fontSize: 10,
+                      color: "#555555",
+                      lineHeight: "12px",
+                      textTransform: "lowercase",
+                    }}
+                  >
+                    {hobby.subtitle}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    flex: "1 1 auto",
+                    padding: "0 16px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily,
+                      fontSize: 10,
+                      color: "#333333",
+                      lineHeight: "13px",
+                      maxWidth: 340,
+                      textTransform: "lowercase",
+                    }}
+                  >
+                    {hobby.detail}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    flexShrink: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 160,
+                      height: 120,
+                      background: "#D8D8D8",
+                      border: "1px solid #A0A0A0",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <PhotoPlaceholderIcon />
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontFamily,
+                      fontSize: 9,
+                      color: "#AAAAAA",
+                      lineHeight: "11px",
+                      textAlign: "center",
+                    }}
+                  >
+                    [ add photo ]
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </motion.div>

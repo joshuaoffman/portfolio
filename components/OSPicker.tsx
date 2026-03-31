@@ -31,7 +31,7 @@ export default function OSPicker() {
       transition={{ duration: 0.28 }}
     >
       <div className="absolute left-6 top-4 text-[#444444] text-xs">
-        [Your Name]
+        joshua offman
       </div>
 
       <div className="h-full flex flex-col items-center justify-center">
