@@ -9,6 +9,191 @@ type BootSequenceProps = {
   onComplete: () => void;
 };
 
+const XPBoot = ({ onComplete }: { onComplete: () => void }) => {
+  const [phase, setPhase] = useState(0);
+  const [lines, setLines] = useState<string[]>([]);
+  const [dotCount, setDotCount] = useState(0);
+
+  const allLines = [
+    "NTLDR v5.1.2600",
+    "",
+    "Initializing processor...",
+    "Switching to protected mode...",
+    "Loading BOOT.INI...",
+    "",
+    "Microsoft Windows XP Professional",
+    "",
+    "NTDETECT V5.1 Checking Hardware...",
+    "Loading kernel: NTOSKRNL.EXE",
+    "Loading HAL: HAL.DLL",
+    "Loading boot device drivers...",
+    "",
+    "Starting Windows...",
+  ];
+
+  void dotCount;
+  void setDotCount;
+
+  useEffect(() => {
+    if (phase === 0) {
+      // type lines one at a time
+      let i = 0;
+      const interval = setInterval(() => {
+        setLines((prev) => [...prev, allLines[i]]);
+        i++;
+        if (i >= allLines.length) {
+          clearInterval(interval);
+          setTimeout(() => setPhase(1), 600);
+        }
+      }, 120);
+      return () => clearInterval(interval);
+    }
+
+    if (phase === 1) {
+      // show XP splash, advance after 3000ms
+      const t = setTimeout(() => setPhase(2), 3000);
+      return () => clearTimeout(t);
+    }
+
+    if (phase === 2) {
+      // brief black pause then complete
+      const t = setTimeout(() => {
+        onComplete();
+      }, 400);
+      return () => clearTimeout(t);
+    }
+  }, [phase, onComplete]);
+
+  // Phase 0 - NTLDR text screen
+  if (phase === 0) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "#000000",
+          padding: "24px",
+          fontFamily: '"IBM Plex Mono", monospace',
+          fontSize: "11px",
+          color: "#FFFFFF",
+          lineHeight: "1.6",
+        }}
+      >
+        {lines.map((line, i) => (
+          // eslint-disable-next-line react/no-array-index-key
+          <div key={i}>{line || "\u00A0"}</div>
+        ))}
+      </div>
+    );
+  }
+
+  // Phase 1 - XP splash screen
+  if (phase === 1) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "#000000",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <style>{`
+          @keyframes xpmarquee {
+            0% { transform: translateX(-200px); }
+            100% { transform: translateX(220px); }
+          }
+          .xp-marquee { animation: xpmarquee 1800ms linear infinite; display: flex; gap: 8px; position: absolute; top: 1px; }
+          .xp-dot { width: 28px; height: 6px; background: #3A88C8; flex-shrink: 0; }
+        `}</style>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "16px",
+            marginBottom: "28px",
+          }}
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "3px",
+              width: "56px",
+              height: "56px",
+            }}
+          >
+            <div style={{ background: "#CE0000" }} />
+            <div style={{ background: "#00B050" }} />
+            <div style={{ background: "#0050CE" }} />
+            <div style={{ background: "#FFD700" }} />
+          </div>
+          <div>
+            <div
+              style={{
+                fontFamily: "Georgia, serif",
+                fontSize: "28px",
+                color: "#FFFFFF",
+                fontWeight: "bold",
+                lineHeight: 1,
+              }}
+            >
+              Windows
+            </div>
+            <div
+              style={{
+                fontFamily: "Georgia, serif",
+                fontSize: "14px",
+                color: "#FFFFFF",
+                marginTop: "4px",
+              }}
+            >
+              XP Professional
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            width: "200px",
+            height: "8px",
+            background: "#3A3A3A",
+            border: "1px solid #666666",
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          <div className="xp-marquee">
+            <div className="xp-dot" />
+            <div className="xp-dot" />
+            <div className="xp-dot" />
+            <div className="xp-dot" />
+            <div className="xp-dot" />
+          </div>
+        </div>
+
+        <div
+          style={{
+            fontFamily: '"IBM Plex Mono", monospace',
+            fontSize: "10px",
+            color: "#888888",
+            marginTop: "10px",
+          }}
+        >
+          Microsoft Corporation
+        </div>
+      </div>
+    );
+  }
+
+  // Phase 2 - black transition
+  return <div style={{ position: "fixed", inset: 0, background: "#000000" }} />;
+};
+
 const BIOS_LINES = [
   "AMIBIOS (C)2007 American Megatrends Inc.",
   "BIOS Version 2.00.07.J00F",
@@ -43,9 +228,6 @@ const LOGO_TEXT = "Windows 95";
 const LOGO_SUBTITLE = "Microsoft Corporation";
 
 const PROGRESS_SEGMENTS = 16;
-const XP_DETECT_DOTS = 29;
-const XP_BOOT_DRIVER_DOTS = 11;
-
 export default function BootSequence({ os, onComplete }: BootSequenceProps) {
   const hasCompletedRef = useRef(false);
 
@@ -72,40 +254,8 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
   const biosLines = useMemo(() => BIOS_LINES, []);
   const dosLines = useMemo(() => DOS_LINES, []);
 
-  const [xpPhase, setXpPhase] = useState<1 | 2 | 3 | 4>(1);
-  const [xpLineCount, setXpLineCount] = useState(0);
-  const [xpDetectDotCount, setXpDetectDotCount] = useState(0);
-  const [xpBootDriverDotCount, setXpBootDriverDotCount] = useState(0);
-  const [xpSplashVisible, setXpSplashVisible] = useState(false);
-
-  const [win10Phase, setWin10Phase] = useState<1 | 2 | 3 | 4 | 5>(1);
-  const [win10LogoVisible, setWin10LogoVisible] = useState(false);
-  const [win10ShowDots, setWin10ShowDots] = useState(false);
-
-  const [macPhase, setMacPhase] = useState<1 | 2 | 3 | 4 | 5>(1);
-  const [macLogoVisible, setMacLogoVisible] = useState(false);
-  const [macShowProgress, setMacShowProgress] = useState(false);
-  const [macProgressFill, setMacProgressFill] = useState(false);
-
-  const xpTextLines = useMemo(
-    () => [
-      "NTLDR v5.1.2600",
-      "",
-      "Initializing processor...",
-      "Switching to protected mode...",
-      "Loading BOOT.INI...",
-      "",
-      "Microsoft Windows XP Professional",
-      "",
-      `NTDETECT V5.1 Checking Hardware${".".repeat(xpDetectDotCount)}`,
-      "Loading kernel: NTOSKRNL.EXE",
-      "Loading HAL: HAL.DLL",
-      `Loading boot drivers${".".repeat(xpBootDriverDotCount)}`,
-      "",
-      "Starting Windows...",
-    ],
-    [xpBootDriverDotCount, xpDetectDotCount]
-  );
+  const [win10Phase, setWin10Phase] = useState(0);
+  const [macPhase, setMacPhase] = useState(0);
 
   useEffect(() => {
     if (!os) return;
@@ -114,242 +264,61 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
       if (hasCompletedRef.current) return;
       hasCompletedRef.current = true;
       onComplete();
-    }, 10000);
+    }, 12000);
     return () => window.clearTimeout(safetyTimeout);
   }, [onComplete, os]);
 
   useEffect(() => {
-    if (!osIsWindowsXP) return;
-
-    hasCompletedRef.current = false;
-    setXpPhase(1);
-    setXpLineCount(0);
-    setXpDetectDotCount(0);
-    setXpBootDriverDotCount(0);
-    setXpSplashVisible(false);
-
-    let cancelled = false;
-    const timeouts: number[] = [];
-
-    const revealLineAt = (idx: number, atMs: number) => {
-      timeouts.push(
-        window.setTimeout(() => {
-          if (cancelled) return;
-          setXpLineCount(idx + 1);
-        }, atMs)
-      );
-    };
-
-    // Phase 1 static lines to hardware detect
-    const phase1IntroOrder = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-    let cursorMs = 0;
-    phase1IntroOrder.forEach((idx) => {
-      revealLineAt(idx, cursorMs);
-      cursorMs += 70;
-    });
-
-    // NTDETECT dots
-    for (let i = 1; i <= XP_DETECT_DOTS; i++) {
-      timeouts.push(
-        window.setTimeout(() => {
-          if (cancelled) return;
-          setXpDetectDotCount(i);
-        }, cursorMs + i * 40)
-      );
-    }
-    cursorMs += XP_DETECT_DOTS * 40 + 70;
-
-    // Kernel/HAL/loading boot drivers line
-    revealLineAt(9, cursorMs);
-    cursorMs += 70;
-    revealLineAt(10, cursorMs);
-    cursorMs += 70;
-    revealLineAt(11, cursorMs);
-
-    // Boot driver dots
-    for (let i = 1; i <= XP_BOOT_DRIVER_DOTS; i++) {
-      timeouts.push(
-        window.setTimeout(() => {
-          if (cancelled) return;
-          setXpBootDriverDotCount(i);
-        }, cursorMs + i * 40)
-      );
-    }
-    cursorMs += XP_BOOT_DRIVER_DOTS * 40 + 70;
-
-    // Blank + starting windows
-    revealLineAt(12, cursorMs);
-    cursorMs += 70;
-    revealLineAt(13, cursorMs);
-    cursorMs += 300;
-
-    // Phase 2 splash
-    timeouts.push(
-      window.setTimeout(() => {
-        if (cancelled) return;
-        setXpPhase(2);
-        setXpSplashVisible(false);
-        window.setTimeout(() => {
-          if (cancelled) return;
-          setXpSplashVisible(true);
-        }, 0);
-      }, cursorMs)
-    );
-
-    // Hold splash for 2800ms total
-    timeouts.push(
-      window.setTimeout(() => {
-        if (cancelled) return;
-        setXpPhase(3);
-      }, cursorMs + 2800)
-    );
-
-    // Phase 3 fade to black 250ms
-    timeouts.push(
-      window.setTimeout(() => {
-        if (cancelled) return;
-        setXpPhase(4);
-      }, cursorMs + 2800 + 250)
-    );
-    // Then snap blue and complete
-    timeouts.push(
-      window.setTimeout(() => {
-        if (cancelled) return;
-        if (hasCompletedRef.current) return;
-        hasCompletedRef.current = true;
-        onComplete();
-      }, cursorMs + 2800 + 260)
-    );
-
-    return () => {
-      cancelled = true;
-      timeouts.forEach((t) => window.clearTimeout(t));
-    };
-  }, [onComplete, osIsWindowsXP]);
+    if (!osIsWindows10) return;
+    setWin10Phase(0);
+  }, [osIsWindows10]);
 
   useEffect(() => {
     if (!osIsWindows10) return;
-
-    hasCompletedRef.current = false;
-    setWin10Phase(1);
-    setWin10LogoVisible(false);
-    setWin10ShowDots(false);
-
-    let cancelled = false;
-    const timeouts: number[] = [];
-
-    // Phase 1: pure black 700ms
-    timeouts.push(
-      window.setTimeout(() => {
-        if (cancelled) return;
-        setWin10Phase(2);
-        setWin10LogoVisible(true);
-      }, 700)
-    );
-
-    // Dots appear 500ms after logo
-    timeouts.push(
-      window.setTimeout(() => {
-        if (cancelled) return;
-        setWin10Phase(3);
-        setWin10ShowDots(true);
-      }, 1200)
-    );
-
-    // Hold for 2200ms then transition
-    timeouts.push(
-      window.setTimeout(() => {
-        if (cancelled) return;
-        setWin10Phase(4);
-      }, 3400)
-    );
-
-    // Fade to black 350ms
-    timeouts.push(
-      window.setTimeout(() => {
-        if (cancelled) return;
-        setWin10Phase(5);
-      }, 3750)
-    );
-    // Snap dark desktop color and complete
-    timeouts.push(
-      window.setTimeout(() => {
-        if (cancelled) return;
-        if (hasCompletedRef.current) return;
-        hasCompletedRef.current = true;
-        onComplete();
-      }, 3760)
-    );
-
-    return () => {
-      cancelled = true;
-      timeouts.forEach((t) => window.clearTimeout(t));
-    };
-  }, [onComplete, osIsWindows10]);
+    if (win10Phase === 0) {
+      const t = window.setTimeout(() => setWin10Phase(1), 800);
+      return () => window.clearTimeout(t);
+    }
+    if (win10Phase === 1) {
+      const t = window.setTimeout(() => setWin10Phase(2), 700);
+      return () => window.clearTimeout(t);
+    }
+    if (win10Phase === 2) {
+      const t = window.setTimeout(() => setWin10Phase(3), 2400);
+      return () => window.clearTimeout(t);
+    }
+    if (win10Phase === 3) {
+      if (hasCompletedRef.current) return;
+      hasCompletedRef.current = true;
+      onComplete();
+    }
+  }, [onComplete, osIsWindows10, win10Phase]);
 
   useEffect(() => {
     if (!osIsMacOS) return;
+    setMacPhase(0);
+  }, [osIsMacOS]);
 
-    hasCompletedRef.current = false;
-    setMacPhase(1);
-    setMacLogoVisible(false);
-    setMacShowProgress(false);
-    setMacProgressFill(false);
-
-    let cancelled = false;
-    const timeouts: number[] = [];
-
-    // Phase 1: black 500ms
-    timeouts.push(
-      window.setTimeout(() => {
-        if (cancelled) return;
-        setMacPhase(2);
-        setMacLogoVisible(true);
-      }, 500)
-    );
-
-    // Progress bar appears 700ms after logo starts
-    timeouts.push(
-      window.setTimeout(() => {
-        if (cancelled) return;
-        setMacPhase(3);
-        setMacShowProgress(true);
-        window.setTimeout(() => {
-          if (cancelled) return;
-          setMacProgressFill(true);
-        }, 0);
-      }, 1200)
-    );
-
-    // Fill 2400ms + hold 500ms, then transition
-    timeouts.push(
-      window.setTimeout(() => {
-        if (cancelled) return;
-        setMacPhase(4);
-      }, 4100)
-    );
-
-    // White fade 500ms then dark snap + complete
-    timeouts.push(
-      window.setTimeout(() => {
-        if (cancelled) return;
-        setMacPhase(5);
-      }, 4600)
-    );
-    timeouts.push(
-      window.setTimeout(() => {
-        if (cancelled) return;
-        if (hasCompletedRef.current) return;
-        hasCompletedRef.current = true;
-        onComplete();
-      }, 4610)
-    );
-
-    return () => {
-      cancelled = true;
-      timeouts.forEach((t) => window.clearTimeout(t));
-    };
-  }, [onComplete, osIsMacOS]);
+  useEffect(() => {
+    if (!osIsMacOS) return;
+    if (macPhase === 0) {
+      const t = window.setTimeout(() => setMacPhase(1), 600);
+      return () => window.clearTimeout(t);
+    }
+    if (macPhase === 1) {
+      const t = window.setTimeout(() => setMacPhase(2), 800);
+      return () => window.clearTimeout(t);
+    }
+    if (macPhase === 2) {
+      const t = window.setTimeout(() => setMacPhase(3), 3200);
+      return () => window.clearTimeout(t);
+    }
+    if (macPhase === 3) {
+      if (hasCompletedRef.current) return;
+      hasCompletedRef.current = true;
+      onComplete();
+    }
+  }, [macPhase, onComplete, osIsMacOS]);
 
   useEffect(() => {
     if (!osIsWindows95) {
@@ -497,148 +466,13 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
 
   if (osIsWindowsXP) {
     return (
-      <div className="h-full w-full relative overflow-hidden bg-black text-white">
-        <style>{`
-          @keyframes xpMarqueeMove {
-            0% { transform: translateX(-180px); }
-            100% { transform: translateX(200px); }
-          }
-          @keyframes win10DotWave {
-            0%, 100% { opacity: 0.2; transform: scale(0.6); }
-            50% { opacity: 1; transform: scale(1); }
-          }
-        `}</style>
-
-        {xpPhase === 1 ? (
-          <div
-            style={{
-              position: "absolute",
-              left: 24,
-              top: 18,
-              fontFamily: '"IBM Plex Mono", monospace',
-              fontSize: 11,
-              color: "#ffffff",
-              whiteSpace: "pre",
-              lineHeight: "14px",
-            }}
-          >
-            {xpTextLines.slice(0, xpLineCount).join("\n")}
-          </div>
-        ) : null}
-
-        {xpPhase === 2 ? (
-          <div className="h-full w-full flex items-center justify-center">
-            <div
-              style={{
-                opacity: xpSplashVisible ? 1 : 0,
-                transition: "opacity 350ms linear",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <svg width="56" height="56" viewBox="0 0 56 56" shapeRendering="crispEdges">
-                  <path d="M0 0H24L27 24H0Z" fill="#CE0000" />
-                  <path d="M32 0H56L56 24H35Z" fill="#00B050" />
-                  <path d="M0 32H24L27 56H0Z" fill="#0050CE" />
-                  <path d="M32 32H56L56 56H35Z" fill="#FFD700" />
-                </svg>
-                <div style={{ marginLeft: 12 }}>
-                  <div
-                    style={{
-                      fontFamily: '"Georgia", "Times New Roman", Times, serif',
-                      fontSize: 28,
-                      color: "#ffffff",
-                      fontWeight: 700,
-                      lineHeight: 1,
-                    }}
-                  >
-                    Windows
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: '"Georgia", "Times New Roman", Times, serif',
-                      fontSize: 14,
-                      color: "#ffffff",
-                      lineHeight: "16px",
-                    }}
-                  >
-                    XP Professional
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 2,
-                      width: 150,
-                      height: 1,
-                      background:
-                        "linear-gradient(to right, #CE0000 0%, #00B050 33%, #0050CE 66%, #FFD700 100%)",
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div
-                style={{
-                  marginTop: 20,
-                  width: 200,
-                  height: 8,
-                  background: "#3A3A3A",
-                  border: "1px solid #666666",
-                  overflow: "hidden",
-                  position: "relative",
-                }}
-              >
-                <div
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    top: 1,
-                    display: "flex",
-                    gap: 8,
-                    animation: "xpMarqueeMove 1800ms linear infinite",
-                  }}
-                >
-                  {Array.from({ length: 5 }).map((_, idx) => (
-                    <span
-                      // eslint-disable-next-line react/no-array-index-key
-                      key={idx}
-                      style={{
-                        width: 28,
-                        height: 6,
-                        background: "#3A88C8",
-                        display: "inline-block",
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-              <div
-                style={{
-                  marginTop: 8,
-                  fontFamily: '"IBM Plex Mono", monospace',
-                  fontSize: 10,
-                  color: "#888888",
-                }}
-              >
-                Microsoft Corporation
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {xpPhase === 3 ? (
-          <motion.div
-            className="absolute inset-0 bg-black"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.25, ease: "linear" }}
-          />
-        ) : null}
-        {xpPhase === 4 ? (
-          <div className="absolute inset-0" style={{ background: "#2B5797" }} />
-        ) : null}
-      </div>
+      <XPBoot
+        onComplete={() => {
+          if (hasCompletedRef.current) return;
+          hasCompletedRef.current = true;
+          onComplete();
+        }}
+      />
     );
   }
 
@@ -646,68 +480,57 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
     return (
       <div className="h-full w-full relative overflow-hidden bg-black">
         <style>{`
-          @keyframes win10DotWave {
-            0%, 100% { opacity: 0.2; transform: scale(0.6); }
+          @keyframes windot {
+            0%, 100% { opacity: 0.15; transform: scale(0.5); }
             50% { opacity: 1; transform: scale(1); }
+          }
+          .win10-dot {
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+          }
+          .win10-dot:nth-child(1) { animation: windot 1200ms ease-in-out infinite 0ms; }
+          .win10-dot:nth-child(2) { animation: windot 1200ms ease-in-out infinite 160ms; }
+          .win10-dot:nth-child(3) { animation: windot 1200ms ease-in-out infinite 320ms; }
+          .win10-dot:nth-child(4) { animation: windot 1200ms ease-in-out infinite 480ms; }
+          .win10-dot:nth-child(5) { animation: windot 1200ms ease-in-out infinite 640ms; }
+          .win10-dots-container {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
           }
         `}</style>
 
-        {(win10Phase === 2 || win10Phase === 3 || win10Phase === 4) ? (
+        {win10Phase >= 1 ? (
           <div className="h-full w-full flex flex-col items-center justify-center">
-            <div
-              style={{
-                opacity: win10LogoVisible ? 1 : 0,
-                transition: "opacity 400ms linear",
-              }}
-            >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.7, ease: "linear" }}>
               <svg width="72" height="72" viewBox="0 0 72 72" shapeRendering="crispEdges">
-                <path d="M0 0H32L36 32H0Z" fill="#F25022" />
-                <path d="M40 0H72L72 32H44Z" fill="#7FBA00" />
-                <path d="M0 40H32L36 72H0Z" fill="#00A4EF" />
-                <path d="M40 40H72L72 72H44Z" fill="#FFB900" />
+                <rect x="0" y="0" width="30" height="30" fill="#F25022" />
+                <rect x="34" y="0" width="30" height="30" fill="#7FBA00" />
+                <rect x="0" y="34" width="30" height="30" fill="#00A4EF" />
+                <rect x="34" y="34" width="30" height="30" fill="#FFB900" />
               </svg>
-            </div>
+            </motion.div>
 
-            {win10ShowDots ? (
+            {win10Phase === 2 ? (
               <div
                 style={{
-                  marginTop: 32,
-                  display: "flex",
-                  gap: 8,
-                  alignItems: "center",
-                  justifyContent: "center",
+                  marginTop: 40,
                 }}
               >
-                {Array.from({ length: 5 }).map((_, idx) => (
-                  <span
-                    // eslint-disable-next-line react/no-array-index-key
-                    key={idx}
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      background: "#ffffff",
-                      animation: "win10DotWave 600ms ease-in-out infinite",
-                      animationDelay: `${idx * 160}ms`,
-                      display: "inline-block",
-                    }}
-                  />
-                ))}
+                <div className="win10-dots-container">
+                  {Array.from({ length: 5 }).map((_, idx) => (
+                    <div
+                      // eslint-disable-next-line react/no-array-index-key
+                      key={idx}
+                      className="win10-dot"
+                    />
+                  ))}
+                </div>
               </div>
             ) : null}
           </div>
-        ) : null}
-
-        {win10Phase === 4 ? (
-          <motion.div
-            className="absolute inset-0 bg-black"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.35, ease: "linear" }}
-          />
-        ) : null}
-        {win10Phase === 5 ? (
-          <div className="absolute inset-0" style={{ background: "#1A1A1A" }} />
         ) : null}
       </div>
     );
@@ -716,23 +539,16 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
   if (osIsMacOS) {
     return (
       <div className="h-full w-full relative overflow-hidden bg-black">
-        {(macPhase === 2 || macPhase === 3 || macPhase === 4 || macPhase === 5) ? (
+        {macPhase >= 1 ? (
           <div className="h-full w-full flex flex-col items-center justify-center">
-            <div
-              style={{
-                opacity: macLogoVisible ? 1 : 0,
-                transition: "opacity 600ms linear",
-              }}
-            >
-              <svg width="80" height="96" viewBox="0 0 80 96" fill="none">
-                <path
-                  d="M52 10c4-5 4-10 3-10-5 0-10 3-13 8-2 4-3 9-2 10 5 1 9-2 12-8ZM40 24c-9 0-16 8-16 20 0 8 3 17 8 24 4 6 8 10 13 10 4 0 6-2 10-2 3 0 5 2 9 2 6 0 10-5 14-12-10-4-12-23-2-29-3-6-8-10-15-10-5 0-8 3-12 3-3 0-5-6-9-6Z"
-                  fill="#FFFFFF"
-                />
-              </svg>
-            </div>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, ease: "linear" }}>
+              <div style={{ position: "relative", width: 80, height: 96 }}>
+                <div style={{ position: "absolute", left: 5, top: 14, width: 70, height: 80, background: "#FFFFFF", borderRadius: "35px 35px 38px 38px" }} />
+                <div style={{ position: "absolute", left: 56, top: 0, width: 12, height: 18, background: "#FFFFFF", borderRadius: 3, transform: "rotate(30deg)" }} />
+              </div>
+            </motion.div>
 
-            {macShowProgress ? (
+            {macPhase === 2 ? (
               <div
                 style={{
                   marginTop: 40,
@@ -745,8 +561,8 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
               >
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: macProgressFill ? 200 : 0 }}
-                  transition={{ duration: 2.4, ease: "easeInOut" }}
+                  animate={{ width: 200 }}
+                  transition={{ duration: 2.6, ease: "easeInOut" }}
                   style={{
                     height: 4,
                     background: "#FFFFFF",
@@ -756,18 +572,6 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
               </div>
             ) : null}
           </div>
-        ) : null}
-
-        {macPhase === 4 ? (
-          <motion.div
-            className="absolute inset-0 bg-white"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, ease: "easeIn" }}
-          />
-        ) : null}
-        {macPhase === 5 ? (
-          <div className="absolute inset-0" style={{ background: "#1E1E1E" }} />
         ) : null}
       </div>
     );

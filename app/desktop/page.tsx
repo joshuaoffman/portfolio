@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import type { ReactNode, RefObject } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import BootSequence from "@/components/BootSequence";
 import { useOS, type OSName } from "@/lib/osContext";
 import { useWindowManager, type Win95Window } from "@/lib/windowManager";
@@ -12,16 +13,24 @@ import HobbiesWindow from "@/components/windows/HobbiesWindow";
 import SettingsPanel from "@/components/SettingsPanel";
 
 export default function DesktopPage() {
-  const { activeOs } = useOS();
+  const router = useRouter();
+  const { activeOS, activeOs } = useOS();
+  const currentOS = activeOS ?? activeOs;
   const [bootComplete, setBootComplete] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     setBootComplete(false);
     setSettingsOpen(false);
-  }, [activeOs]);
+  }, [currentOS]);
 
-  const showBoot = activeOs !== null && !bootComplete;
+  useEffect(() => {
+    if (currentOS === null) {
+      router.push("/");
+    }
+  }, [currentOS, router]);
+
+  const showBoot = currentOS !== null && !bootComplete;
 
   const TASKBAR_HEIGHT_PX = 28;
   const WINDOW_DEFAULT_SIZE = { width: 480, height: 320 };
@@ -55,6 +64,7 @@ export default function DesktopPage() {
   const [selectedIconIdNon95, setSelectedIconIdNon95] = useState<string | null>(null);
 
   const clockText = useClockText();
+  const dateText = useDateText();
 
   const windowTitles = useMemo(
     () => ({
@@ -333,12 +343,12 @@ export default function DesktopPage() {
   });
 
   useEffect(() => {
-    if (activeOs === "windows95") return;
+    if (currentOS === "windows95") return;
     themedClampAllWindowsToDesktop();
-  }, [activeOs, desktopArea, themedClampAllWindowsToDesktop]);
+  }, [currentOS, desktopArea, themedClampAllWindowsToDesktop]);
 
   const startOpenAnimationAndOpen = (iconId: string) => {
-    if (activeOs !== "windows95") return;
+    if (currentOS !== "windows95") return;
 
     const token = ++openAnimTokenRef.current;
 
@@ -439,10 +449,22 @@ export default function DesktopPage() {
     return Math.max(min, Math.min(max, n));
   }
 
-  if (activeOs && activeOs !== "windows95") {
-    const isXP = activeOs === "windowsxp";
-    const isW10 = activeOs === "windows10";
-    const isMac = activeOs === "macos";
+  if (!currentOS) {
+    return null;
+  }
+
+  if (showBoot) {
+    return (
+      <div className="h-screen w-screen overflow-hidden relative bg-black">
+        <BootSequence key={currentOS} os={currentOS} onComplete={() => setBootComplete(true)} />
+      </div>
+    );
+  }
+
+  if (currentOS !== "windows95") {
+    const isXP = currentOS === "windowsxp";
+    const isW10 = currentOS === "windows10";
+    const isMac = currentOS === "macos";
     const taskbarOrDockHeight = isMac ? 64 : isW10 ? 40 : 30;
     const topInset = isMac ? 24 : 0;
     const desktopBg = isXP ? "#2B5797" : isW10 ? "#1A1A1A" : "#1E1E1E";
@@ -506,7 +528,16 @@ export default function DesktopPage() {
           color: "#fff",
           fontFamily: '"IBM Plex Mono", monospace',
         }}
+        data-theme-cursor={currentOS}
       >
+        <style>{`
+          [data-theme-cursor="windowsxp"], [data-theme-cursor="windowsxp"] * { cursor: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIiBzaGFwZS1yZW5kZXJpbmc9ImNyaXNwRWRnZXMiPjxwYXRoIGZpbGw9IiNmZmYiIHN0cm9rZT0iIzAwMCIgZD0iTTEgMXYyMGw1LTUgNCA4IDMtMS00LTggNyAxeiIvPjwvc3ZnPg==") 0 0, auto; }
+          [data-theme-cursor="windowsxp"] button, [data-theme-cursor="windowsxp"] [role="button"] { cursor: pointer; }
+          [data-theme-cursor="windows10"], [data-theme-cursor="windows10"] * { cursor: default; }
+          [data-theme-cursor="windows10"] button, [data-theme-cursor="windows10"] [role="button"] { cursor: pointer; }
+          [data-theme-cursor="macos"], [data-theme-cursor="macos"] * { cursor: default; }
+          [data-theme-cursor="macos"] button, [data-theme-cursor="macos"] [role="button"] { cursor: pointer; }
+        `}</style>
         {isMac ? (
           <div
             style={{
@@ -569,7 +600,7 @@ export default function DesktopPage() {
                 <ThemedWindow
                   key={win.id}
                   win={win}
-                  theme={activeOs}
+                  theme={currentOS}
                   focused={themedFocusedWindowId === win.id}
                   desktopConstraintsRef={desktopAreaRef}
                   onFocus={() => themedFocusWindow(win.id)}
@@ -714,7 +745,7 @@ export default function DesktopPage() {
               <span>🔊</span><span>📶</span><span>🔋</span>
               <div style={{ lineHeight: 1.1, textAlign: "right" }}>
                 <div>{clockText.split(" ")[0]}</div>
-                <div>{new Date().toLocaleDateString()}</div>
+                <div>{dateText}</div>
               </div>
             </div>
           </div>
@@ -758,8 +789,8 @@ export default function DesktopPage() {
             transition={{ duration: 0.3, ease: "linear" }}
           >
             <BootSequence
-              key={activeOs}
-              os={activeOs}
+              key={currentOS}
+              os={currentOS}
               onComplete={() => setBootComplete(true)}
             />
           </motion.div>
@@ -776,9 +807,9 @@ export default function DesktopPage() {
         color: "#FFFFFF",
         fontFamily: '"IBM Plex Mono", monospace',
       }}
-      data-win95-cursor-scope={activeOs === "windows95" ? "true" : "false"}
+      data-win95-cursor-scope={currentOS === "windows95" ? "true" : "false"}
     >
-      {activeOs === "windows95" ? (
+      {currentOS === "windows95" ? (
         <style>{`
           [data-win95-cursor-scope="true"],
           [data-win95-cursor-scope="true"] * {
@@ -1007,8 +1038,8 @@ export default function DesktopPage() {
           transition={{ duration: 0.3, ease: "linear" }}
         >
           <BootSequence
-            key={activeOs}
-            os={activeOs}
+            key={currentOS}
+            os={currentOS}
             onComplete={() => setBootComplete(true)}
           />
         </motion.div>
@@ -1018,13 +1049,24 @@ export default function DesktopPage() {
 }
 
 function useClockText() {
-  const [text, setText] = useState(() => formatWin95Time(new Date()));
+  const [text, setText] = useState("");
 
   useEffect(() => {
+    setText(formatWin95Time(new Date()));
     const id = window.setInterval(() => setText(formatWin95Time(new Date())), 1000);
     return () => window.clearInterval(id);
   }, []);
 
+  return text;
+}
+
+function useDateText() {
+  const [text, setText] = useState("");
+  useEffect(() => {
+    setText(formatDate(new Date()));
+    const id = window.setInterval(() => setText(formatDate(new Date())), 60000);
+    return () => window.clearInterval(id);
+  }, []);
   return text;
 }
 
@@ -1034,6 +1076,10 @@ function formatWin95Time(d: Date) {
   const minutes = String(d.getMinutes()).padStart(2, "0");
   const ampm = hours24 < 12 ? "AM" : "PM";
   return `${hour12}:${minutes} ${ampm}`;
+}
+
+function formatDate(d: Date) {
+  return d.toLocaleDateString();
 }
 
 function ThemedWindow({

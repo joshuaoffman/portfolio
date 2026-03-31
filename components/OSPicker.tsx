@@ -20,7 +20,7 @@ const OS_OPTIONS: OsOption[] = [
 
 export default function OSPicker() {
   const router = useRouter();
-  const { setActiveOs } = useOS();
+  const { setActiveOS } = useOS();
   const [hovered, setHovered] = useState<OSName | null>(null);
 
   return (
@@ -53,7 +53,10 @@ export default function OSPicker() {
                 onFocus={() => setHovered(opt.value)}
                 onBlur={() => setHovered(null)}
                 onClick={() => {
-                  setActiveOs(opt.value);
+                  // Debug aid to verify selected OS flow.
+                  // eslint-disable-next-line no-console
+                  console.log("selected os:", opt.value);
+                  setActiveOS(opt.value);
                   router.push("/desktop");
                 }}
                 aria-label={`Select ${opt.label}`}
