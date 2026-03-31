@@ -371,9 +371,6 @@ export default function DesktopPage() {
           const iconY = Math.round((desktopArea.height * pos.topPct) / 100);
           const isSelected = selectedIconId === icon.id;
 
-          // Label is centered below the icon.
-          const labelWidth = 96;
-
           return (
             <div
               key={icon.id}
@@ -383,7 +380,6 @@ export default function DesktopPage() {
                 top: iconY,
                 width: 96,
                 userSelect: "none",
-                textAlign: "center",
               }}
               onPointerDown={(e) => {
                 e.stopPropagation();
@@ -396,44 +392,38 @@ export default function DesktopPage() {
             >
               <div
                 style={{
-                  width: 32,
-                  height: 32,
                   display: "flex",
+                  flexDirection: "column",
                   alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "default",
-                }}
-              >
-                <DesktopIconSvg kind={icon.iconKind} selected={isSelected} scale={32} />
-              </div>
-
-              <div
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  top: 32 + 2,
-                  width: labelWidth,
-                  paddingLeft: 0,
-                  paddingRight: 0,
-                  fontSize: 11,
-                  lineHeight: "12px",
-                  color: "#FFFFFF",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  justifyContent: "flex-start",
                 }}
               >
                 <div
                   style={{
-                    backgroundColor: isSelected ? "#000080" : "transparent",
+                    width: 32,
+                    height: 32,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "default",
+                  }}
+                >
+                  <DesktopIconSvg kind={icon.iconKind} selected={isSelected} scale={32} />
+                </div>
+
+                <div
+                  style={{
+                    marginTop: 4,
+                    fontFamily: '"IBM Plex Mono", monospace',
+                    fontSize: 11,
+                    lineHeight: "12px",
                     color: "#FFFFFF",
+                    textAlign: "center",
+                    maxWidth: 80,
+                    wordBreak: "break-word",
                     padding: "0 2px",
-                    maxWidth: labelWidth,
-                    overflow: "hidden",
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                    textOverflow: "ellipsis",
+                    boxSizing: "border-box",
+                    backgroundColor: isSelected ? "#000080" : "transparent",
                   }}
                 >
                   {icon.label}
@@ -471,8 +461,13 @@ export default function DesktopPage() {
           onTaskbarButton={(id) => {
             const w = openWindows.find((x) => x.id === id);
             if (!w) return;
-            if (w.minimized) openWindow(id);
-            else focusWindow(id);
+            if (w.minimized) {
+              openWindow(id);
+            } else if (focusedWindowId === id) {
+              minimizeWindow(id);
+            } else {
+              focusWindow(id);
+            }
           }}
           clockText={clockText}
         />
@@ -548,13 +543,13 @@ function DesktopTaskbar({
   return (
     <>
       {/* Start button (far left) */}
-      <div style={{ position: "relative", width: 54, height: TASKBAR_HEIGHT_PX, flex: "0 0 auto" }}>
+      <div style={{ position: "relative", width: 80, height: TASKBAR_HEIGHT_PX, flex: "0 0 auto" }}>
         <div
           style={{
             position: "absolute",
             left: 0,
             top: 3,
-            width: 54,
+            width: 80,
             height: 22,
           }}
         >
@@ -582,7 +577,7 @@ function DesktopTaskbar({
                 boxSizing: "border-box",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
+                justifyContent: "flex-start",
                 fontFamily: '"IBM Plex Mono", monospace',
                 fontWeight: 700,
                 fontSize: 11,
@@ -590,10 +585,21 @@ function DesktopTaskbar({
                 transform: `translate(${startPressed ? 1 : 0}px, ${startPressed ? 1 : 0}px)`,
               }}
             >
-              <span aria-hidden>⊞ Start</span>
-              <span style={{ marginLeft: 2 }} aria-hidden>
-                {/* keep placeholder spacing */}
-              </span>
+              <div
+                aria-hidden
+                style={{
+                  width: 13,
+                  height: 13,
+                  marginLeft: 4,
+                  marginRight: 4,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <StartFlagIcon />
+              </div>
+              <span aria-hidden>Start</span>
             </div>
           </div>
 
@@ -647,7 +653,7 @@ function DesktopTaskbar({
                 }}
                 style={{
                   height: 22,
-                  maxWidth: 160,
+                  width: 160,
                   flex: "0 0 auto",
                   marginLeft: 2,
                   marginRight: 2,
@@ -725,8 +731,33 @@ function DesktopTaskbar({
 
 function SpeakerIcon() {
   return (
-    <svg viewBox="0 0 8 8" width="8" height="8" shapeRendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="1,3 4.5,3 6.5,1.5 6.5,6.5 4.5,5 1,5" fill="#000000" />
+    <svg viewBox="0 0 10 8" width="10" height="8" shapeRendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="1,3 4,3 6,1.5 6,6.5 4,5 1,5" fill="#000000" />
+      <path d="M7 2.5 Q8 4 7 5.5" fill="none" stroke="#000000" strokeWidth="1" />
+      <path d="M8 2 Q9.5 4 8 6" fill="none" stroke="#000000" strokeWidth="1" />
+    </svg>
+  );
+}
+
+function StartFlagIcon() {
+  return (
+    <svg
+      viewBox="0 0 13 13"
+      width="13"
+      height="13"
+      shapeRendering="crispEdges"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <rect x="0" y="0" width="13" height="13" fill="none" />
+      {/* four 6x6 squares with 1px gaps */}
+      <rect x="0" y="0" width="6" height="6" fill="#FF0000" />
+      <rect x="7" y="0" width="6" height="6" fill="#00FF00" />
+      <rect x="0" y="7" width="6" height="6" fill="#0000FF" />
+      <rect x="7" y="7" width="6" height="6" fill="#FFFF00" />
+      {/* simple black outline grid */}
+      <rect x="0" y="0" width="13" height="13" fill="none" stroke="#000000" strokeWidth="1" />
+      <line x1="6.5" y1="0" x2="6.5" y2="13" stroke="#000000" strokeWidth="1" />
+      <line x1="0" y1="6.5" x2="13" y2="6.5" stroke="#000000" strokeWidth="1" />
     </svg>
   );
 }
