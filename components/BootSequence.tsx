@@ -9,60 +9,184 @@ type BootSequenceProps = {
   onComplete: () => void;
 };
 
+const XP_LINES = [
+  "NTLDR v5.1.2600",
+  "",
+  "Initializing processor...",
+  "Switching to protected mode...",
+  "Loading BOOT.INI...",
+  "",
+  "Microsoft Windows XP Professional",
+  "",
+  "NTDETECT V5.1 Checking Hardware...",
+  "Loading kernel: NTOSKRNL.EXE",
+  "Loading HAL: HAL.DLL",
+  "Loading boot device drivers...",
+  "",
+  "Starting Windows...",
+];
+
+const Win10Boot = ({ onComplete }: { onComplete: () => void }) => {
+  const [phase, setPhase] = useState(0);
+  const called = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  useEffect(() => {
+    if (phase !== 0) return;
+    const t = window.setTimeout(() => setPhase(1), 800);
+    return () => window.clearTimeout(t);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== 1) return;
+    const t = window.setTimeout(() => setPhase(2), 700);
+    return () => window.clearTimeout(t);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== 2) return;
+    const t = window.setTimeout(() => setPhase(3), 2400);
+    return () => window.clearTimeout(t);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== 3 || called.current) return;
+    called.current = true;
+    onCompleteRef.current();
+  }, [phase]);
+
+  // Phase 0 - pure black
+  if (phase === 0) {
+    return <div style={{ position: "fixed", inset: 0, background: "#000000" }} />;
+  }
+
+  // Phase 1 - logo fade in
+  if (phase === 1) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "#000000",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.7, ease: "linear" }}
+        >
+          <svg width="64" height="64" viewBox="0 0 64 64" shapeRendering="crispEdges">
+            <rect x="0" y="0" width="30" height="30" fill="#F25022" />
+            <rect x="34" y="0" width="30" height="30" fill="#7FBA00" />
+            <rect x="0" y="34" width="30" height="30" fill="#00A4EF" />
+            <rect x="34" y="34" width="30" height="30" fill="#FFB900" />
+          </svg>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Phase 2 - logo with spinner dots
+  if (phase === 2) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "#000000",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <style>{`
+          @keyframes win10pulse {
+            0%, 100% { opacity: 0.15; transform: scale(0.5); }
+            50% { opacity: 1; transform: scale(1); }
+          }
+          .win10-dot { width: 10px; height: 10px; background: #FFFFFF; border-radius: 50%; }
+          .win10-dot:nth-child(1) { animation: win10pulse 1200ms linear infinite; animation-delay: 0ms; }
+          .win10-dot:nth-child(2) { animation: win10pulse 1200ms linear infinite; animation-delay: 160ms; }
+          .win10-dot:nth-child(3) { animation: win10pulse 1200ms linear infinite; animation-delay: 320ms; }
+          .win10-dot:nth-child(4) { animation: win10pulse 1200ms linear infinite; animation-delay: 480ms; }
+          .win10-dot:nth-child(5) { animation: win10pulse 1200ms linear infinite; animation-delay: 640ms; }
+        `}</style>
+
+        <svg width="64" height="64" viewBox="0 0 64 64" shapeRendering="crispEdges">
+          <rect x="0" y="0" width="30" height="30" fill="#F25022" />
+          <rect x="34" y="0" width="30" height="30" fill="#7FBA00" />
+          <rect x="0" y="34" width="30" height="30" fill="#00A4EF" />
+          <rect x="34" y="34" width="30" height="30" fill="#FFB900" />
+        </svg>
+
+        <div style={{ marginTop: 40, display: "flex", gap: 8, alignItems: "center", justifyContent: "center" }}>
+          <div className="win10-dot" />
+          <div className="win10-dot" />
+          <div className="win10-dot" />
+          <div className="win10-dot" />
+          <div className="win10-dot" />
+        </div>
+      </div>
+    );
+  }
+
+  // Phase 3 - black and complete
+  return <div style={{ position: "fixed", inset: 0, background: "#000000" }} />;
+};
+
 const XPBoot = ({ onComplete }: { onComplete: () => void }) => {
   const [phase, setPhase] = useState(0);
   const [lines, setLines] = useState<string[]>([]);
-  const [dotCount, setDotCount] = useState(0);
-
-  const allLines = [
-    "NTLDR v5.1.2600",
-    "",
-    "Initializing processor...",
-    "Switching to protected mode...",
-    "Loading BOOT.INI...",
-    "",
-    "Microsoft Windows XP Professional",
-    "",
-    "NTDETECT V5.1 Checking Hardware...",
-    "Loading kernel: NTOSKRNL.EXE",
-    "Loading HAL: HAL.DLL",
-    "Loading boot device drivers...",
-    "",
-    "Starting Windows...",
-  ];
-
-  void dotCount;
-  void setDotCount;
+  const called = useRef(false);
+  const onCompleteRef = useRef(onComplete);
 
   useEffect(() => {
-    if (phase === 0) {
-      // type lines one at a time
-      let i = 0;
-      const interval = setInterval(() => {
-        setLines((prev) => [...prev, allLines[i]]);
-        i++;
-        if (i >= allLines.length) {
-          clearInterval(interval);
-          setTimeout(() => setPhase(1), 600);
-        }
-      }, 120);
-      return () => clearInterval(interval);
-    }
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
-    if (phase === 1) {
-      // show XP splash, advance after 3000ms
-      const t = setTimeout(() => setPhase(2), 3000);
-      return () => clearTimeout(t);
-    }
+  useEffect(() => {
+    if (phase !== 0) return;
+    let i = 0;
+    let advanceTimeout: number | null = null;
+    setLines([]);
+    const interval = window.setInterval(() => {
+      setLines((prev) => [...prev, XP_LINES[i]]);
+      i += 1;
+      if (i >= XP_LINES.length) {
+        window.clearInterval(interval);
+        advanceTimeout = window.setTimeout(() => {
+          setPhase(1);
+        }, 500);
+      }
+    }, 100);
 
-    if (phase === 2) {
-      // brief black pause then complete
-      const t = setTimeout(() => {
-        onComplete();
-      }, 400);
-      return () => clearTimeout(t);
-    }
-  }, [phase, onComplete]);
+    return () => {
+      window.clearInterval(interval);
+      if (advanceTimeout !== null) {
+        window.clearTimeout(advanceTimeout);
+      }
+    };
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== 1) return;
+    const t = window.setTimeout(() => setPhase(2), 3000);
+    return () => window.clearTimeout(t);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== 3) return;
+    const t = window.setTimeout(() => setPhase(4), 300);
+    return () => window.clearTimeout(t);
+  }, [phase]);
 
   // Phase 0 - NTLDR text screen
   if (phase === 0) {
@@ -102,11 +226,11 @@ const XPBoot = ({ onComplete }: { onComplete: () => void }) => {
         }}
       >
         <style>{`
-          @keyframes xpmarquee {
-            0% { transform: translateX(-200px); }
-            100% { transform: translateX(220px); }
+          @keyframes xproll {
+            from { transform: translateX(-220px); }
+            to { transform: translateX(220px); }
           }
-          .xp-marquee { animation: xpmarquee 1800ms linear infinite; display: flex; gap: 8px; position: absolute; top: 1px; }
+          .xp-marquee { position: absolute; left: 0; top: 1px; display: flex; gap: 8px; animation: xproll 1800ms linear infinite; }
           .xp-dot { width: 28px; height: 6px; background: #3A88C8; flex-shrink: 0; }
         `}</style>
 
@@ -190,8 +314,134 @@ const XPBoot = ({ onComplete }: { onComplete: () => void }) => {
     );
   }
 
-  // Phase 2 - black transition
-  return <div style={{ position: "fixed", inset: 0, background: "#000000" }} />;
+  // Phase 2 - fade splash to black
+  if (phase === 2) {
+    return (
+      <motion.div
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "#000000",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        initial={{ opacity: 1 }}
+        animate={{ opacity: 0 }}
+        transition={{ duration: 0.4, ease: "linear" }}
+        onAnimationComplete={() => setPhase(3)}
+      >
+        <style>{`
+          .xp-dot-static { width: 28px; height: 6px; background: #3A88C8; flex-shrink: 0; }
+        `}</style>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "16px",
+            marginBottom: "28px",
+          }}
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "3px",
+              width: "56px",
+              height: "56px",
+            }}
+          >
+            <div style={{ background: "#CE0000" }} />
+            <div style={{ background: "#00B050" }} />
+            <div style={{ background: "#0050CE" }} />
+            <div style={{ background: "#FFD700" }} />
+          </div>
+          <div>
+            <div
+              style={{
+                fontFamily: "Georgia, serif",
+                fontSize: "28px",
+                color: "#FFFFFF",
+                fontWeight: "bold",
+                lineHeight: 1,
+              }}
+            >
+              Windows
+            </div>
+            <div
+              style={{
+                fontFamily: "Georgia, serif",
+                fontSize: "14px",
+                color: "#FFFFFF",
+                marginTop: "4px",
+              }}
+            >
+              XP Professional
+            </div>
+          </div>
+        </div>
+        <div
+          style={{
+            width: "200px",
+            height: "8px",
+            background: "#3A3A3A",
+            border: "1px solid #666666",
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 1,
+              display: "flex",
+              gap: 8,
+            }}
+          >
+            <div className="xp-dot-static" />
+            <div className="xp-dot-static" />
+            <div className="xp-dot-static" />
+            <div className="xp-dot-static" />
+            <div className="xp-dot-static" />
+          </div>
+        </div>
+        <div
+          style={{
+            fontFamily: '"IBM Plex Mono", monospace',
+            fontSize: "10px",
+            color: "#888888",
+            marginTop: "10px",
+          }}
+        >
+          Microsoft Corporation
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Phase 3 - hold black
+  if (phase === 3) {
+    return <div style={{ position: "fixed", inset: 0, background: "#000000" }} />;
+  }
+
+  // Phase 4 - top-down framebuffer sweep then complete
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#000000" }}>
+      <motion.div
+        style={{ position: "absolute", left: 0, top: 0, width: "100%", background: "#2B5797" }}
+        initial={{ height: 0 }}
+        animate={{ height: "100%" }}
+        transition={{ duration: 0.6, ease: "linear" }}
+        onAnimationComplete={() => {
+          if (called.current) return;
+          called.current = true;
+          onCompleteRef.current();
+        }}
+      />
+    </div>
+  );
 };
 
 const BIOS_LINES = [
@@ -254,7 +504,6 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
   const biosLines = useMemo(() => BIOS_LINES, []);
   const dosLines = useMemo(() => DOS_LINES, []);
 
-  const [win10Phase, setWin10Phase] = useState(0);
   const [macPhase, setMacPhase] = useState(0);
 
   useEffect(() => {
@@ -267,32 +516,6 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
     }, 12000);
     return () => window.clearTimeout(safetyTimeout);
   }, [onComplete, os]);
-
-  useEffect(() => {
-    if (!osIsWindows10) return;
-    setWin10Phase(0);
-  }, [osIsWindows10]);
-
-  useEffect(() => {
-    if (!osIsWindows10) return;
-    if (win10Phase === 0) {
-      const t = window.setTimeout(() => setWin10Phase(1), 800);
-      return () => window.clearTimeout(t);
-    }
-    if (win10Phase === 1) {
-      const t = window.setTimeout(() => setWin10Phase(2), 700);
-      return () => window.clearTimeout(t);
-    }
-    if (win10Phase === 2) {
-      const t = window.setTimeout(() => setWin10Phase(3), 2400);
-      return () => window.clearTimeout(t);
-    }
-    if (win10Phase === 3) {
-      if (hasCompletedRef.current) return;
-      hasCompletedRef.current = true;
-      onComplete();
-    }
-  }, [onComplete, osIsWindows10, win10Phase]);
 
   useEffect(() => {
     if (!osIsMacOS) return;
@@ -478,61 +701,13 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
 
   if (osIsWindows10) {
     return (
-      <div className="h-full w-full relative overflow-hidden bg-black">
-        <style>{`
-          @keyframes windot {
-            0%, 100% { opacity: 0.15; transform: scale(0.5); }
-            50% { opacity: 1; transform: scale(1); }
-          }
-          .win10-dot {
-            width: 10px;
-            height: 10px;
-            background: white;
-            border-radius: 50%;
-          }
-          .win10-dot:nth-child(1) { animation: windot 1200ms ease-in-out infinite 0ms; }
-          .win10-dot:nth-child(2) { animation: windot 1200ms ease-in-out infinite 160ms; }
-          .win10-dot:nth-child(3) { animation: windot 1200ms ease-in-out infinite 320ms; }
-          .win10-dot:nth-child(4) { animation: windot 1200ms ease-in-out infinite 480ms; }
-          .win10-dot:nth-child(5) { animation: windot 1200ms ease-in-out infinite 640ms; }
-          .win10-dots-container {
-            display: flex;
-            gap: 8px;
-            justify-content: center;
-          }
-        `}</style>
-
-        {win10Phase >= 1 ? (
-          <div className="h-full w-full flex flex-col items-center justify-center">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.7, ease: "linear" }}>
-              <svg width="72" height="72" viewBox="0 0 72 72" shapeRendering="crispEdges">
-                <rect x="0" y="0" width="30" height="30" fill="#F25022" />
-                <rect x="34" y="0" width="30" height="30" fill="#7FBA00" />
-                <rect x="0" y="34" width="30" height="30" fill="#00A4EF" />
-                <rect x="34" y="34" width="30" height="30" fill="#FFB900" />
-              </svg>
-            </motion.div>
-
-            {win10Phase === 2 ? (
-              <div
-                style={{
-                  marginTop: 40,
-                }}
-              >
-                <div className="win10-dots-container">
-                  {Array.from({ length: 5 }).map((_, idx) => (
-                    <div
-                      // eslint-disable-next-line react/no-array-index-key
-                      key={idx}
-                      className="win10-dot"
-                    />
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+      <Win10Boot
+        onComplete={() => {
+          if (hasCompletedRef.current) return;
+          hasCompletedRef.current = true;
+          onComplete();
+        }}
+      />
     );
   }
 

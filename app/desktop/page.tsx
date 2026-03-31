@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useDragControls } from "framer-motion";
 import type { ReactNode, RefObject } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -18,6 +18,9 @@ export default function DesktopPage() {
   const currentOS = activeOS ?? activeOs;
   const [bootComplete, setBootComplete] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [xpStartHover, setXpStartHover] = useState(false);
+  const [xpStartPressed, setXpStartPressed] = useState(false);
+  const [hoveredIconIdNon95, setHoveredIconIdNon95] = useState<string | null>(null);
 
   useEffect(() => {
     setBootComplete(false);
@@ -467,11 +470,15 @@ export default function DesktopPage() {
     const isMac = currentOS === "macos";
     const taskbarOrDockHeight = isMac ? 64 : isW10 ? 40 : 30;
     const topInset = isMac ? 24 : 0;
-    const desktopBg = isXP ? "#2B5797" : isW10 ? "#1A1A1A" : "#1E1E1E";
+    const desktopBg = isXP
+      ? "radial-gradient(120% 80% at 50% -10%, #a7dcff 0%, #87CEEB 42%, #5B9BD5 100%)"
+      : isW10
+        ? "radial-gradient(circle at 70% 50%, #1a3a6b 0%, #10284a 35%, #0a1628 75%)"
+        : "#1E1E1E";
 
-    const iconSize = isMac ? 48 : 32;
+    const iconSize = isW10 ? 48 : isMac ? 48 : 32;
     const iconLabelSelectedBg = isXP
-      ? "rgba(0,0,128,0.65)"
+      ? "rgba(10,36,106,0.7)"
       : isW10
         ? "rgba(0,120,215,0.65)"
         : "rgba(10,132,255,0.6)";
@@ -524,7 +531,8 @@ export default function DesktopPage() {
       <div
         className="h-screen w-screen overflow-hidden relative"
         style={{
-          backgroundColor: desktopBg,
+          background: desktopBg,
+          backgroundColor: isXP ? "#5B9BD5" : desktopBg,
           color: "#fff",
           fontFamily: '"IBM Plex Mono", monospace',
         }}
@@ -592,6 +600,68 @@ export default function DesktopPage() {
           }}
           onPointerDown={() => setSelectedIconIdNon95(null)}
         >
+          {isXP ? (
+            <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
+              <div
+                style={{
+                  position: "absolute",
+                  top: "8%",
+                  left: "12%",
+                  width: "18%",
+                  height: "8%",
+                  borderRadius: "50%",
+                  background: "rgba(255,255,255,0.35)",
+                  filter: "blur(8px)",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  top: "18%",
+                  right: "18%",
+                  width: "14%",
+                  height: "6%",
+                  borderRadius: "50%",
+                  background: "rgba(255,255,255,0.28)",
+                  filter: "blur(7px)",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  left: "-10%",
+                  right: "-10%",
+                  bottom: "-16%",
+                  height: "56%",
+                  background: "#4A7C2F",
+                  clipPath: "ellipse(68% 60% at 44% 100%)",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  left: "-8%",
+                  right: "-8%",
+                  bottom: "-14%",
+                  height: "50%",
+                  background: "#5A9E3A",
+                  clipPath: "ellipse(62% 54% at 42% 100%)",
+                  opacity: 0.9,
+                }}
+              />
+            </div>
+          ) : null}
+          {isW10 ? (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                pointerEvents: "none",
+                background:
+                  "radial-gradient(circle at 70% 50%, rgba(0,120,215,0.15) 0%, rgba(0,120,215,0.06) 28%, rgba(0,0,0,0) 65%)",
+              }}
+            />
+          ) : null}
           <div style={{ position: "absolute", inset: 0 }}>
             {themedOpenWindows
               .filter((w) => !w.minimized)
@@ -628,8 +698,25 @@ export default function DesktopPage() {
                   e.stopPropagation();
                   openFromIcon(icon.id);
                 }}
+                onPointerEnter={() => {
+                  if (isW10) setHoveredIconIdNon95(icon.id);
+                }}
+                onPointerLeave={() => {
+                  if (isW10) setHoveredIconIdNon95(null);
+                }}
               >
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    background:
+                      isW10 && (selected || hoveredIconIdNon95 === icon.id)
+                        ? "rgba(0,120,215,0.35)"
+                        : "transparent",
+                    padding: isW10 ? "4px 6px" : 0,
+                  }}
+                >
                   <div
                     style={{
                       width: iconSize,
@@ -641,7 +728,7 @@ export default function DesktopPage() {
                       justifyContent: "center",
                     }}
                   >
-                    <DesktopIconSvg kind={icon.iconKind} selected={false} scale={isMac ? 16 : 32} />
+                    <DesktopIconSvg kind={icon.iconKind} selected={false} scale={isMac ? 16 : 32} theme={currentOS} />
                   </div>
                   <div
                     style={{
@@ -663,22 +750,33 @@ export default function DesktopPage() {
         </div>
 
         {isXP ? (
-          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 30, display: "flex", alignItems: "center", background: "linear-gradient(to right, #1F5FB5, #3A8FE8)", borderTop: "1px solid #0A3D82" }}>
+          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 30, display: "flex", alignItems: "center", background: "linear-gradient(to right, #245EDC, #3B8FE8)", borderTop: "2px solid #1A4BAF" }}>
             <button
               type="button"
               onClick={() => setSettingsOpen((v) => !v)}
+              onPointerEnter={() => setXpStartHover(true)}
+              onPointerLeave={() => {
+                setXpStartHover(false);
+                setXpStartPressed(false);
+              }}
+              onPointerDown={() => setXpStartPressed(true)}
+              onPointerUp={() => setXpStartPressed(false)}
               style={{
                 width: 54,
                 height: 26,
                 marginLeft: 2,
                 borderTop: "1px solid #6FD45A",
                 borderLeft: "1px solid #6FD45A",
-                borderBottom: "1px solid #236A13",
-                borderRight: "1px solid #236A13",
-                background: "linear-gradient(to right, #4AAF3C, #39881C)",
+                borderBottom: "1px solid #1E6B12",
+                borderRight: "1px solid #1E6B12",
+                background: xpStartPressed
+                  ? "linear-gradient(to bottom, #3BA829, #5ED64A)"
+                  : xpStartHover
+                    ? "linear-gradient(to bottom, #5ED64A, #3BA829)"
+                    : "linear-gradient(to bottom, #4DBB3A, #2E8B1F)",
                 borderRadius: "0 12px 12px 0",
                 color: "#fff",
-                textShadow: "1px 1px #000",
+                textShadow: "1px 1px 1px #000000",
                 fontSize: 11,
                 fontWeight: 700,
                 display: "flex",
@@ -702,23 +800,30 @@ export default function DesktopPage() {
                   style={{
                     height: 22,
                     minWidth: 120,
-                    maxWidth: 180,
+                    maxWidth: 160,
                     background: themedFocusedWindowId === w.id ? "#1A4E9A" : "#2B6DBF",
                     border: `1px solid ${themedFocusedWindowId === w.id ? "#0A3070" : "#1A4E9A"}`,
                     color: "#fff",
                     fontSize: 10,
-                    padding: "0 6px",
+                    padding: "0 6px 0 4px",
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
+                    borderRadius: "0 3px 3px 0",
+                    textAlign: "left",
+                    textShadow: themedFocusedWindowId === w.id ? "1px 1px #0A3070" : "none",
                   }}
                 >
                   {w.title}
                 </button>
               ))}
             </div>
-            <div style={{ height: "100%", padding: "0 8px", display: "flex", alignItems: "center", background: "#1A5DAA", borderLeft: "1px solid #0A3D82", color: "#fff", fontSize: 10, gap: 6 }}>
-              <SpeakerIcon />
+            <div style={{ height: "100%", padding: "0 8px", display: "flex", alignItems: "center", background: "#1A4BAF", borderLeft: "1px solid #1238A0", color: "#fff", fontSize: 10, gap: 6 }}>
+              <svg width="14" height="14" viewBox="0 0 14 14" shapeRendering="crispEdges">
+                <polygon points="2,6 5,6 8,4 8,10 5,8 2,8" fill="#FFFFFF" />
+                <path d="M9 5 Q10.5 7 9 9" fill="none" stroke="#FFFFFF" strokeWidth="1" />
+                <path d="M10.5 4 Q12.5 7 10.5 10" fill="none" stroke="#FFFFFF" strokeWidth="1" />
+              </svg>
               <span>{clockText}</span>
             </div>
           </div>
@@ -727,26 +832,52 @@ export default function DesktopPage() {
         {isW10 ? (
           <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 40, display: "flex", alignItems: "center", background: "#1A1A1A" }}>
             <button type="button" onClick={() => setSettingsOpen((v) => !v)} style={{ width: 48, height: 40, background: "transparent", border: 0 }}>
-              <svg width="18" height="18" viewBox="0 0 18 18" shapeRendering="crispEdges"><path d="M0 0H8L9 8H0Z" fill="#F25022"/><path d="M10 0H18V8H11Z" fill="#7FBA00"/><path d="M0 10H8L9 18H0Z" fill="#00A4EF"/><path d="M10 10H18V18H11Z" fill="#FFB900"/></svg>
+              <svg width="18" height="18" viewBox="0 0 18 18" shapeRendering="crispEdges">
+                <path d="M0 0H8L9 8H0Z" fill="#F25022" />
+                <path d="M10 0H18V8H11Z" fill="#7FBA00" />
+                <path d="M0 10H8L9 18H0Z" fill="#00A4EF" />
+                <path d="M10 10H18V18H11Z" fill="#FFB900" />
+              </svg>
             </button>
-            <div style={{ width: 200, height: 28, background: "#2A2A2A", border: "1px solid #3A3A3A", display: "flex", alignItems: "center", padding: "0 8px", color: "#888", fontSize: 10 }}>
-              <span style={{ marginRight: 6 }}>⌕</span>Search
+            <div style={{ width: 260, height: 32, background: "#2B2B2B", border: "1px solid #3A3A3A", display: "flex", alignItems: "center", padding: "0 8px", color: "#888", fontSize: 10 }}>
+              <span style={{ marginRight: 6, color: "#888888" }}>⌕</span>Search the web and Windows
             </div>
-            <button type="button" style={{ width: 40, height: 40, background: "transparent", border: 0, color: "#fff" }}>▭▭</button>
+            <button type="button" style={{ width: 44, height: 40, background: "transparent", border: 0, color: "#fff" }}>
+              <svg width="18" height="14" viewBox="0 0 18 14">
+                <rect x="1" y="3" width="7" height="7" fill="none" stroke="#FFFFFF" />
+                <rect x="9" y="1" width="8" height="9" fill="none" stroke="#FFFFFF" />
+              </svg>
+            </button>
             <div style={{ flex: 1, display: "flex", alignItems: "stretch", justifyContent: "center" }}>
-              {themedOpenWindows.map((w) => (
-                <button key={w.id} type="button" onClick={() => { if (w.minimized) themedOpenWindow(w.id); themedFocusWindow(w.id); }} style={{ width: 44, height: 40, border: 0, background: "transparent", position: "relative", color: "#fff" }}>
-                  <svg width="20" height="20" viewBox="0 0 20 20"><rect x="3" y="4" width="14" height="12" stroke="#fff" fill="none"/></svg>
-                  {themedFocusedWindowId === w.id ? <span style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 3, background: "#0078D7" }} /> : null}
-                </button>
-              ))}
+              {ICONS.map((icon) => {
+                const open = themedOpenWindows.some((w) => w.id === icon.id && !w.minimized);
+                return (
+                  <button
+                    key={icon.id}
+                    type="button"
+                    onClick={() => {
+                      if (icon.id === "settings") setSettingsOpen((v) => !v);
+                      else openFromIcon(icon.id);
+                    }}
+                    style={{ width: 44, height: 40, border: 0, background: "transparent", position: "relative", color: "#fff" }}
+                  >
+                    <DesktopIconSvg kind={icon.iconKind} selected={false} scale={24} theme={currentOS} />
+                    {open ? <span style={{ position: "absolute", left: 8, right: 8, bottom: 0, height: 2, background: "#0078D7" }} /> : null}
+                  </button>
+                );
+              })}
             </div>
-            <div style={{ height: "100%", borderLeft: "1px solid #3A3A3A", padding: "0 8px", display: "flex", alignItems: "center", gap: 6, color: "#fff", fontSize: 10 }}>
-              <span>🔊</span><span>📶</span><span>🔋</span>
-              <div style={{ lineHeight: 1.1, textAlign: "right" }}>
+            <div style={{ height: "100%", padding: "0 8px", display: "flex", alignItems: "center", gap: 6, color: "#fff", fontSize: 10 }}>
+              <span style={{ width: 16, height: 16 }}>📶</span>
+              <span style={{ width: 16, height: 16 }}>🔊</span>
+              <span style={{ width: 16, height: 16 }}>🔋</span>
+              <div style={{ width: 1, height: 22, background: "#3A3A3A", margin: "0 2px" }} />
+              <div style={{ lineHeight: 1.1, textAlign: "right", fontFamily: '"IBM Plex Mono", monospace', fontSize: 10 }}>
                 <div>{clockText.split(" ")[0]}</div>
                 <div>{dateText}</div>
               </div>
+              <span style={{ width: 16, height: 16 }}>🔔</span>
+              <div style={{ width: 2, height: "100%", background: "#3A3A3A", marginLeft: 4 }} />
             </div>
           </div>
         ) : null}
@@ -766,7 +897,7 @@ export default function DesktopPage() {
                     }}
                     style={{ width: 48, height: 48, borderRadius: 8, background: "#3A3A3A", border: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
                   >
-                    <DesktopIconSvg kind={icon.iconKind} selected={false} scale={16} />
+                    <DesktopIconSvg kind={icon.iconKind} selected={false} scale={16} theme={currentOS} />
                   </motion.button>
                   {open ? <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#fff", marginTop: 3 }} /> : null}
                 </div>
@@ -1108,13 +1239,14 @@ function ThemedWindow({
   const isXP = theme === "windowsxp";
   const isW10 = theme === "windows10";
   const isMac = theme === "macos";
+  const dragControls = useDragControls();
+  const [xpHoverBtn, setXpHoverBtn] = useState<"min" | "max" | "close" | null>(null);
+  const [xpPressedBtn, setXpPressedBtn] = useState<"min" | "max" | "close" | null>(null);
+  const [w10HoverBtn, setW10HoverBtn] = useState<"min" | "max" | "close" | null>(null);
 
   const baseBorder = isXP
     ? {
-        borderTop: "3px solid #0055E5",
-        borderLeft: "2px solid #0055E5",
-        borderRight: "2px solid #0055E5",
-        borderBottom: "2px solid #0055E5",
+        border: "3px solid #0A246A",
       }
     : isW10
       ? {
@@ -1140,28 +1272,40 @@ function ThemedWindow({
         ...baseBorder,
       }}
       drag
+      dragControls={dragControls}
+      dragListener={!isXP && !isW10}
       dragConstraints={desktopConstraintsRef}
       dragElastic={0}
-      onPointerDown={onFocus}
+      onPointerDown={() => {
+        if (!isXP) onFocus();
+      }}
       onDragEnd={(e, info) => onMove(win.position.x + info.delta.x, win.position.y + info.delta.y)}
     >
       <div
+        onPointerDown={(e) => {
+          onFocus();
+          if (isXP || isW10) {
+            dragControls.start(e);
+          }
+        }}
         style={{
-          height: isXP ? 28 : isW10 ? 30 : 28,
+          height: isXP ? 30 : isW10 ? 32 : 28,
           background: isXP
-            ? "linear-gradient(to right, #0078D7, #2B88D8)"
+            ? "linear-gradient(to right, #0A246A, #3A88C8)"
             : isW10
               ? focused
-                ? "#1A1A1A"
-                : "#2A2A2A"
+                ? "#FFFFFF"
+                : "#F0F0F0"
               : "#2A2A2A",
-          color: "#fff",
+          color: isW10 ? "#000000" : "#fff",
           display: "flex",
           alignItems: "center",
           justifyContent: isMac ? "space-between" : "flex-start",
           borderRadius: isMac ? "10px 10px 0 0" : isXP ? "6px 6px 0 0" : 0,
           fontFamily: '"IBM Plex Mono", monospace',
           fontSize: 11,
+          boxSizing: "border-box",
+          borderTop: isXP ? "1px solid #5BAEE8" : "none",
         }}
       >
         {isMac ? (
@@ -1172,14 +1316,107 @@ function ThemedWindow({
           </div>
         ) : (
           <>
-            <div style={{ width: 16, height: 16, marginLeft: isW10 ? 8 : 4, background: "#888" }} />
-            <div style={{ marginLeft: 8, fontWeight: isXP ? 700 : 500, color: isW10 && !focused ? "#888888" : "#FFFFFF" }}>
+            <div style={{ width: 16, height: 16, marginLeft: isXP ? 6 : isW10 ? 8 : 4, background: "#888" }} />
+            <div style={{ marginLeft: isW10 ? 12 : 8, fontWeight: isXP ? 700 : 500, color: isW10 ? "#000000" : isW10 && !focused ? "#888888" : "#FFFFFF" }}>
               {win.title}
             </div>
-            <div style={{ marginLeft: "auto", display: "flex" }}>
-              <button type="button" onClick={onMinimize} style={{ width: isXP ? 21 : 46, height: isXP ? 21 : 30, background: isXP ? "linear-gradient(to bottom, #4A9FE8, #2B6DBF)" : "transparent", border: isXP ? "1px solid #1A4E9A" : 0, color: "#fff" }}>_</button>
-              <button type="button" onClick={onMaximize} style={{ width: isXP ? 21 : 46, height: isXP ? 21 : 30, background: isXP ? "linear-gradient(to bottom, #4A9FE8, #2B6DBF)" : "transparent", border: isXP ? "1px solid #1A4E9A" : 0, color: "#fff" }}>□</button>
-              <button type="button" onClick={onClose} style={{ width: isXP ? 21 : 46, height: isXP ? 21 : 30, background: isXP ? "linear-gradient(to bottom, #E84A4A, #BF2B2B)" : "#E81123", border: isXP ? "1px solid #9A1A1A" : 0, color: "#fff" }}>✕</button>
+            <div style={{ marginLeft: "auto", display: "flex", gap: isXP ? 3 : 0, paddingRight: isXP ? 5 : 0 }}>
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  if (isXP) setXpPressedBtn("min");
+                }}
+                onPointerUp={() => isXP && setXpPressedBtn(null)}
+                onPointerLeave={() => isXP && setXpPressedBtn(null)}
+                onPointerEnter={() => isXP && setXpHoverBtn("min")}
+                onPointerOut={() => isXP && setXpHoverBtn(null)}
+                onMouseEnter={() => isW10 && setW10HoverBtn("min")}
+                onMouseLeave={() => isW10 && setW10HoverBtn(null)}
+                onClick={onMinimize}
+                style={{
+                  width: isXP ? 21 : 46,
+                  height: isXP ? 21 : 32,
+                  background: isXP
+                    ? xpPressedBtn === "min"
+                      ? "linear-gradient(to bottom, #2B6DBF, #3F85D0)"
+                      : xpHoverBtn === "min"
+                        ? "linear-gradient(to bottom, #62B3F2, #4A86D3)"
+                        : "linear-gradient(to bottom, #4A9FE8, #2B6DBF)"
+                    : w10HoverBtn === "min"
+                      ? "#E0E0E0"
+                      : "transparent",
+                  border: isXP ? "1px solid #1A4E9A" : "none",
+                  borderRadius: isXP ? 3 : 0,
+                  color: isW10 ? "#000000" : "#fff",
+                }}
+              >
+                {isW10 ? "—" : "_"}
+              </button>
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  if (isXP) setXpPressedBtn("max");
+                }}
+                onPointerUp={() => isXP && setXpPressedBtn(null)}
+                onPointerLeave={() => isXP && setXpPressedBtn(null)}
+                onPointerEnter={() => isXP && setXpHoverBtn("max")}
+                onPointerOut={() => isXP && setXpHoverBtn(null)}
+                onMouseEnter={() => isW10 && setW10HoverBtn("max")}
+                onMouseLeave={() => isW10 && setW10HoverBtn(null)}
+                onClick={onMaximize}
+                style={{
+                  width: isXP ? 21 : 46,
+                  height: isXP ? 21 : 32,
+                  background: isXP
+                    ? xpPressedBtn === "max"
+                      ? "linear-gradient(to bottom, #2B6DBF, #3F85D0)"
+                      : xpHoverBtn === "max"
+                        ? "linear-gradient(to bottom, #62B3F2, #4A86D3)"
+                        : "linear-gradient(to bottom, #4A9FE8, #2B6DBF)"
+                    : w10HoverBtn === "max"
+                      ? "#E0E0E0"
+                      : "transparent",
+                  border: isXP ? "1px solid #1A4E9A" : "none",
+                  borderRadius: isXP ? 3 : 0,
+                  color: isW10 ? "#000000" : "#fff",
+                }}
+              >
+                □
+              </button>
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  if (isXP) setXpPressedBtn("close");
+                }}
+                onPointerUp={() => isXP && setXpPressedBtn(null)}
+                onPointerLeave={() => isXP && setXpPressedBtn(null)}
+                onPointerEnter={() => isXP && setXpHoverBtn("close")}
+                onPointerOut={() => isXP && setXpHoverBtn(null)}
+                onMouseEnter={() => isW10 && setW10HoverBtn("close")}
+                onMouseLeave={() => isW10 && setW10HoverBtn(null)}
+                onClick={onClose}
+                style={{
+                  width: isXP ? 21 : 46,
+                  height: isXP ? 21 : 32,
+                  background: isXP
+                    ? xpPressedBtn === "close"
+                      ? "linear-gradient(to bottom, #BF2020, #931616)"
+                      : xpHoverBtn === "close"
+                        ? "linear-gradient(to bottom, #EE6457, #D2352D)"
+                        : "linear-gradient(to bottom, #E84A3A, #BF2020)"
+                    : w10HoverBtn === "close"
+                      ? "#E81123"
+                      : "transparent",
+                  border: isXP ? "1px solid #9A1010" : "none",
+                  borderRadius: isXP ? 3 : 0,
+                  color: isW10 ? (w10HoverBtn === "close" ? "#FFFFFF" : "#000000") : "#fff",
+                }}
+              >
+                ✕
+              </button>
             </div>
           </>
         )}
@@ -1192,7 +1429,16 @@ function ThemedWindow({
           <span>File</span><span>Edit</span><span>View</span><span>Help</span>
         </div>
       ) : null}
-      <div style={{ height: `calc(100% - ${isXP ? 48 : isW10 ? 30 : 28}px)`, background: "#FFFFFF" }}>{children}</div>
+      <div
+        style={{
+          height: `calc(100% - ${isXP ? 50 : isW10 ? 32 : 28}px)`,
+          background: "#FFFFFF",
+          border: isXP ? "1px solid #ACA899" : "none",
+          boxSizing: "border-box",
+        }}
+      >
+        {children}
+      </div>
     </motion.div>
   );
 }
@@ -1457,10 +1703,12 @@ function DesktopIconSvg({
   kind,
   selected,
   scale,
+  theme,
 }: {
   kind: "folder" | "file" | "envelope" | "control";
   selected: boolean;
-  scale: 32 | 16;
+  scale: 16 | 24 | 32 | 48;
+  theme?: OSName;
 }) {
   const common = {
     viewBox: "0 0 32 32",
@@ -1469,6 +1717,91 @@ function DesktopIconSvg({
     shapeRendering: "crispEdges" as const,
     xmlns: "http://www.w3.org/2000/svg",
   };
+
+  if (theme === "windows10") {
+    if (kind === "folder") {
+      return (
+        <svg {...common}>
+          <path d="M4 10h10l2 3h12v11H4z" fill="#FFB900" />
+          <rect x="4" y="13" width="24" height="11" fill="#FFB900" />
+        </svg>
+      );
+    }
+
+    if (kind === "file") {
+      return (
+        <svg {...common}>
+          <rect x="6" y="5" width="18" height="22" fill="#FFFFFF" />
+          <polygon points="18,5 24,5 24,11" fill="#DCE8F8" />
+          <rect x="6" y="5" width="2" height="22" fill="#0078D7" />
+        </svg>
+      );
+    }
+
+    if (kind === "envelope") {
+      return (
+        <svg {...common}>
+          <rect x="4" y="10" width="24" height="14" fill="none" stroke="#FFFFFF" strokeWidth="2" />
+          <polygon points="6,12 16,19 26,12 16,15" fill="#0078D7" />
+        </svg>
+      );
+    }
+
+    return (
+      <svg {...common}>
+        <path
+          d="M16 6l2 0.8 1.8-1.1 2.4 2.4-1.1 1.8L22 12l2 0.5v3l-2 0.5-0.9 2.1 1.1 1.8-2.4 2.4-1.8-1.1L16 22l-0.5 2h-3l-0.5-2-2.1-0.9-1.8 1.1-2.4-2.4 1.1-1.8L6 16l-2-0.5v-3L6 12l0.9-2.1-1.1-1.8 2.4-2.4 1.8 1.1L12 6.8l0.5-2h3z"
+          fill="#808080"
+        />
+        <circle cx="16" cy="14" r="4" fill="#000000" />
+      </svg>
+    );
+  }
+
+  if (theme === "windowsxp") {
+    if (kind === "folder") {
+      return (
+        <svg {...common}>
+          <rect x="2" y="6" width="28" height="22" rx="3" ry="3" fill="#FFCC00" />
+          <rect x="5" y="3" width="13" height="6" rx="3" ry="3" fill="#FFCC00" />
+          <rect x="3" y="18" width="26" height="8" fill="#E6A800" opacity="0.45" />
+          <rect x="4" y="8" width="22" height="6" fill="#FFE566" opacity="0.9" />
+          <rect x="2" y="6" width="28" height="22" rx="3" ry="3" fill="none" stroke="#B47A00" strokeWidth="1" />
+        </svg>
+      );
+    }
+
+    if (kind === "file") {
+      return (
+        <svg {...common}>
+          <rect x="5" y="4" width="22" height="24" rx="3" ry="3" fill="#EEF4FF" stroke="#A6B8D8" strokeWidth="1" />
+          <polygon points="19,4 27,4 27,12" fill="#C8D8F0" />
+          <rect x="8" y="12" width="14" height="2" fill="#3A88C8" />
+          <rect x="8" y="16" width="12" height="2" fill="#7AA9DE" />
+          <rect x="8" y="20" width="10" height="2" fill="#9FC3EA" />
+        </svg>
+      );
+    }
+
+    if (kind === "envelope") {
+      return (
+        <svg {...common}>
+          <rect x="4" y="9" width="24" height="16" rx="3" ry="3" fill="#FFFFFF" stroke="#7BA2CC" strokeWidth="1" />
+          <polygon points="5,11 16,19 27,11 16,14" fill="#3A88C8" />
+        </svg>
+      );
+    }
+
+    return (
+      <svg {...common}>
+        <rect x="3" y="3" width="26" height="26" rx="4" ry="4" fill="#DCE7F9" stroke="#8CA8CF" strokeWidth="1" />
+        <rect x="6" y="6" width="10" height="10" rx="2" ry="2" fill="#2B88D8" />
+        <rect x="18" y="6" width="8" height="8" rx="2" ry="2" fill="#E84A3A" />
+        <rect x="6" y="18" width="8" height="8" rx="2" ry="2" fill="#4DBB3A" />
+        <rect x="16" y="16" width="10" height="10" rx="2" ry="2" fill="#FFB900" />
+      </svg>
+    );
+  }
 
   if (kind === "folder") {
     return (
