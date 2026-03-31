@@ -639,6 +639,9 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
   const [logoVisible, setLogoVisible] = useState(false);
   const [progressFilled, setProgressFilled] = useState(0);
 
+  /** Win95 BIOS: same handler as Delete key — wired to clickable “DEL”. */
+  const proceedAfterDelRef = useRef<(() => void) | null>(null);
+
   const biosLines = useMemo(() => BIOS_LINES, []);
   const dosLines = useMemo(() => DOS_LINES, []);
 
@@ -682,9 +685,11 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
         setBiosCursorOn((v) => !v);
       }, 500);
 
-      onKeyDownHandler = (e: KeyboardEvent) => {
-        if (cancelled) return;
-        if (e.key !== "Delete" && e.key !== "Del") return;
+      let continuedFromBios = false;
+
+      const proceedAfterDel = () => {
+        if (cancelled || continuedFromBios) return;
+        continuedFromBios = true;
 
         if (onKeyDownHandler) {
           window.removeEventListener("keydown", onKeyDownHandler);
@@ -768,6 +773,14 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
         }
       };
 
+      proceedAfterDelRef.current = proceedAfterDel;
+
+      onKeyDownHandler = (e: KeyboardEvent) => {
+        if (cancelled) return;
+        if (e.key !== "Delete" && e.key !== "Del") return;
+        proceedAfterDel();
+      };
+
       window.addEventListener("keydown", onKeyDownHandler);
     };
 
@@ -787,6 +800,7 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
 
     return () => {
       cancelled = true;
+      proceedAfterDelRef.current = null;
       if (cursorInterval !== null) {
         window.clearInterval(cursorInterval);
       }
@@ -856,7 +870,31 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
 
                 return (
                   <span key={idx}>
-                    {line}
+                    {isFinal ? (
+                      <>
+                        Press{" "}
+                        <button
+                          type="button"
+                          onClick={() => proceedAfterDelRef.current?.()}
+                          style={{
+                            padding: 0,
+                            margin: 0,
+                            border: "none",
+                            background: "transparent",
+                            color: "inherit",
+                            font: "inherit",
+                            cursor: "pointer",
+                            textDecoration: "underline",
+                          }}
+                          aria-label="Continue (same as Delete key)"
+                        >
+                          DEL
+                        </button>
+                        {" "}to continue...
+                      </>
+                    ) : (
+                      line
+                    )}
                     {showCursor ? "█" : null}
                     {"\n"}
                   </span>
