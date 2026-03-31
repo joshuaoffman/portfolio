@@ -142,6 +142,144 @@ const Win10Boot = ({ onComplete }: { onComplete: () => void }) => {
   return <div style={{ position: "fixed", inset: 0, background: "#000000" }} />;
 };
 
+const MAC_BOOT_APPLE_PATH =
+  "M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.2 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 70.1 0 128.4 46.2 172.5 46.2 42.8 0 109.6-49 191.4-49 30.9 0 108.2 2.6 168.1 75.4zm-216.6-25.7c-6.5-34.5-18.2-78.1-45.6-113.6-22.4-29.2-58.5-52.7-96.9-52.7-2.6 0-5.2.3-7.8.6 2.6 36.1 18.2 79.7 46.2 115.9 25 32.6 63.8 58.5 104.1 49.8z";
+
+function MacAppleLogo() {
+  return (
+    <svg width={70} height={86} viewBox="0 0 814 1000" fill="none" aria-hidden>
+      <path fill="#FFFFFF" d={MAC_BOOT_APPLE_PATH} />
+    </svg>
+  );
+}
+
+const MacBoot = ({ onComplete }: { onComplete: () => void }) => {
+  console.log("MacBoot mounted");
+  const [phase, setPhase] = useState(0);
+  const completeCalled = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      if (completeCalled.current) return;
+      completeCalled.current = true;
+      onCompleteRef.current();
+    }, 12000);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (phase !== 0) return;
+    const t = window.setTimeout(() => setPhase(1), 600);
+    return () => window.clearTimeout(t);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== 1) return;
+    const t = window.setTimeout(() => setPhase(2), 1000);
+    return () => window.clearTimeout(t);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== 2) return;
+    const t = window.setTimeout(() => setPhase(3), 3500);
+    return () => window.clearTimeout(t);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== 3) return;
+    const t = window.setTimeout(() => {
+      if (completeCalled.current) return;
+      completeCalled.current = true;
+      onCompleteRef.current();
+    }, 600);
+    return () => window.clearTimeout(t);
+  }, [phase]);
+
+  if (phase === 0) {
+    return <div style={{ position: "fixed", inset: 0, background: "#000000" }} />;
+  }
+
+  if (phase === 1) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "#000000",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8 }}
+        >
+          <MacAppleLogo />
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (phase === 2) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "#000000",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <MacAppleLogo />
+        <div
+          style={{
+            marginTop: 48,
+            width: 200,
+            height: 4,
+            background: "#3A3A3A",
+            borderRadius: 2,
+            overflow: "hidden",
+          }}
+        >
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: 200 }}
+            transition={{ duration: 2.8, ease: "easeInOut" }}
+            style={{
+              height: 4,
+              background: "#FFFFFF",
+              borderRadius: 2,
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <motion.div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "#FFFFFF",
+      }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    />
+  );
+};
+
 const XPBoot = ({ onComplete }: { onComplete: () => void }) => {
   const [phase, setPhase] = useState(0);
   const [lines, setLines] = useState<string[]>([]);
@@ -504,8 +642,6 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
   const biosLines = useMemo(() => BIOS_LINES, []);
   const dosLines = useMemo(() => DOS_LINES, []);
 
-  const [macPhase, setMacPhase] = useState(0);
-
   useEffect(() => {
     if (!os) return;
     hasCompletedRef.current = false;
@@ -516,32 +652,6 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
     }, 12000);
     return () => window.clearTimeout(safetyTimeout);
   }, [onComplete, os]);
-
-  useEffect(() => {
-    if (!osIsMacOS) return;
-    setMacPhase(0);
-  }, [osIsMacOS]);
-
-  useEffect(() => {
-    if (!osIsMacOS) return;
-    if (macPhase === 0) {
-      const t = window.setTimeout(() => setMacPhase(1), 600);
-      return () => window.clearTimeout(t);
-    }
-    if (macPhase === 1) {
-      const t = window.setTimeout(() => setMacPhase(2), 800);
-      return () => window.clearTimeout(t);
-    }
-    if (macPhase === 2) {
-      const t = window.setTimeout(() => setMacPhase(3), 3200);
-      return () => window.clearTimeout(t);
-    }
-    if (macPhase === 3) {
-      if (hasCompletedRef.current) return;
-      hasCompletedRef.current = true;
-      onComplete();
-    }
-  }, [macPhase, onComplete, osIsMacOS]);
 
   useEffect(() => {
     if (!osIsWindows95) {
@@ -713,42 +823,13 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
 
   if (osIsMacOS) {
     return (
-      <div className="h-full w-full relative overflow-hidden bg-black">
-        {macPhase >= 1 ? (
-          <div className="h-full w-full flex flex-col items-center justify-center">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, ease: "linear" }}>
-              <div style={{ position: "relative", width: 80, height: 96 }}>
-                <div style={{ position: "absolute", left: 5, top: 14, width: 70, height: 80, background: "#FFFFFF", borderRadius: "35px 35px 38px 38px" }} />
-                <div style={{ position: "absolute", left: 56, top: 0, width: 12, height: 18, background: "#FFFFFF", borderRadius: 3, transform: "rotate(30deg)" }} />
-              </div>
-            </motion.div>
-
-            {macPhase === 2 ? (
-              <div
-                style={{
-                  marginTop: 40,
-                  width: 200,
-                  height: 4,
-                  background: "#3A3A3A",
-                  borderRadius: 2,
-                  overflow: "hidden",
-                }}
-              >
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: 200 }}
-                  transition={{ duration: 2.6, ease: "easeInOut" }}
-                  style={{
-                    height: 4,
-                    background: "#FFFFFF",
-                    borderRadius: 2,
-                  }}
-                />
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+      <MacBoot
+        onComplete={() => {
+          if (hasCompletedRef.current) return;
+          hasCompletedRef.current = true;
+          onComplete();
+        }}
+      />
     );
   }
 
@@ -882,7 +963,8 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
                 animate={{ opacity: 0 }}
                 transition={{
                   duration: 0.2,
-                  ease: "steps(1, end)",
+                  // Hold at start then jump to end (same as CSS steps(1, end))
+                  ease: (t) => (t >= 1 ? 1 : 0),
                 }}
               />
 

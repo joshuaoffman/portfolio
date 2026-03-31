@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useDragControls } from "framer-motion";
-import type { ReactNode, RefObject } from "react";
+import type { CSSProperties, ReactNode, RefObject } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import BootSequence from "@/components/BootSequence";
@@ -82,6 +82,10 @@ export default function DesktopPage() {
     }),
     []
   );
+  type WindowTitleKey = keyof typeof windowTitles;
+
+  const titleForWindowId = (id: string) =>
+    windowTitles[id as WindowTitleKey] ?? id;
 
   type LocalWin = {
     id: string;
@@ -428,7 +432,7 @@ export default function DesktopPage() {
           ...prev,
           {
             id: iconId,
-            title: windowTitles[iconId] ?? iconId,
+            title: titleForWindowId(iconId),
             position: { x: finalRect.x, y: finalRect.y },
             size: { width: finalRect.width, height: finalRect.height },
             zIndex: nextZ,
@@ -476,7 +480,7 @@ export default function DesktopPage() {
         ? "radial-gradient(circle at 70% 50%, #1a3a6b 0%, #10284a 35%, #0a1628 75%)"
         : "#1E1E1E";
 
-    const iconSize = isW10 ? 48 : isMac ? 48 : 32;
+    const iconSize = isW10 ? 48 : isMac ? 52 : 32;
     const iconLabelSelectedBg = isXP
       ? "rgba(10,36,106,0.7)"
       : isW10
@@ -565,10 +569,16 @@ export default function DesktopPage() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 11 }}>
-              <svg width="14" height="16" viewBox="0 0 14 16" fill="none">
+              <svg
+                width={(14 * 814) / 1000}
+                height={14}
+                viewBox="0 0 814 1000"
+                fill="none"
+                aria-hidden
+              >
                 <path
-                  d="M9 2c1-2 1-2 1-2-2 0-3 1-4 2-1 1-1 2-1 2 2 0 3-1 4-2ZM7 4C4 4 2 6 2 9c0 2 1 4 2 6 1 1 2 1 3 1s1-1 2-1 1 1 2 1c1 0 2-1 3-3-2-1-2-5 1-6-1-2-2-3-4-3-1 0-2 1-3 1s-1-1-2-1Z"
                   fill="#FFFFFF"
+                  d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.2 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 70.1 0 128.4 46.2 172.5 46.2 42.8 0 109.6-49 191.4-49 30.9 0 108.2 2.6 168.1 75.4zm-216.6-25.7c-6.5-34.5-18.2-78.1-45.6-113.6-22.4-29.2-58.5-52.7-96.9-52.7-2.6 0-5.2.3-7.8.6 2.6 36.1 18.2 79.7 46.2 115.9 25 32.6 63.8 58.5 104.1 49.8z"
                 />
               </svg>
               <span>Finder</span>
@@ -693,7 +703,7 @@ export default function DesktopPage() {
             return (
               <div
                 key={icon.id}
-                style={{ position: "absolute", left: x, top: y, width: isMac ? 72 : 96, userSelect: "none" }}
+                style={{ position: "absolute", left: x, top: y, width: isMac ? 80 : 96, userSelect: "none" }}
                 onPointerDown={(e) => {
                   e.stopPropagation();
                   openFromIcon(icon.id);
@@ -719,21 +729,26 @@ export default function DesktopPage() {
                 >
                   <div
                     style={{
-                      width: iconSize,
-                      height: iconSize,
-                      background: isMac ? "#2A2A2A" : "transparent",
-                      borderRadius: isMac ? 8 : 0,
+                      width: isMac ? 52 : iconSize,
+                      height: isMac ? 52 : iconSize,
+                      background: "transparent",
+                      borderRadius: 0,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                     }}
                   >
-                    <DesktopIconSvg kind={icon.iconKind} selected={false} scale={isMac ? 16 : 32} theme={currentOS} />
+                    {isMac ? (
+                      <MacDesktopAppIcon id={icon.id} />
+                    ) : (
+                      <DesktopIconSvg kind={icon.iconKind} selected={false} scale={32} theme={currentOS} />
+                    )}
                   </div>
                   <div
                     style={{
                       marginTop: 4,
                       fontSize: 11,
+                      fontFamily: isMac ? '"IBM Plex Mono", monospace' : undefined,
                       color: "#fff",
                       textAlign: "center",
                       background: selected ? iconLabelSelectedBg : "transparent",
@@ -895,9 +910,19 @@ export default function DesktopPage() {
                       if (icon.id === "settings") setSettingsOpen((v) => !v);
                       else openFromIcon(icon.id);
                     }}
-                    style={{ width: 48, height: 48, borderRadius: 8, background: "#3A3A3A", border: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: 12,
+                      background: "transparent",
+                      border: 0,
+                      padding: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
                   >
-                    <DesktopIconSvg kind={icon.iconKind} selected={false} scale={16} theme={currentOS} />
+                    <MacDesktopAppIcon id={icon.id} />
                   </motion.button>
                   {open ? <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#fff", marginTop: 3 }} /> : null}
                 </div>
@@ -1690,6 +1715,142 @@ function StartFlagIcon() {
       <line x1="0" y1="6.5" x2="13" y2="6.5" stroke="#000000" strokeWidth="1" />
     </svg>
   );
+}
+
+const MAC_DESKTOP_ICON_BOX: CSSProperties = {
+  width: 52,
+  height: 52,
+  borderRadius: 12,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  boxSizing: "border-box",
+  overflow: "hidden",
+  flexShrink: 0,
+};
+
+function MacDesktopAppIcon({ id }: { id: string }) {
+  switch (id) {
+    case "about":
+      return (
+        <div style={{ ...MAC_DESKTOP_ICON_BOX, background: "#0A84FF" }}>
+          <span
+            style={{
+              fontFamily: "Georgia, serif",
+              fontWeight: 700,
+              fontSize: 28,
+              color: "#FFFFFF",
+              lineHeight: 1,
+            }}
+          >
+            i
+          </span>
+        </div>
+      );
+    case "projects":
+      return (
+        <div style={{ ...MAC_DESKTOP_ICON_BOX, background: "#5E5CE6" }}>
+          <svg width={30} height={26} viewBox="0 0 30 26" fill="none" aria-hidden>
+            <path
+              d="M3 10 L3 23 L27 23 L27 11 L13 11 L11 9 L3 9 Z"
+              stroke="#FFFFFF"
+              strokeWidth={1.6}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              fill="none"
+            />
+            <path
+              d="M3 9 V7 h7 l2 2"
+              stroke="#FFFFFF"
+              strokeWidth={1.6}
+              fill="none"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
+      );
+    case "experience":
+      return (
+        <div style={{ ...MAC_DESKTOP_ICON_BOX, background: "#FF9F0A" }}>
+          <svg width={30} height={28} viewBox="0 0 30 28" fill="none" aria-hidden>
+            <path
+              d="M9 11 V9 C9 7.2 10.3 6 12 6 h6 C19.7 6 21 7.2 21 9 v2"
+              stroke="#FFFFFF"
+              strokeWidth={1.6}
+              fill="none"
+              strokeLinecap="round"
+            />
+            <rect x={5} y={11} width={20} height={14} rx={1.5} stroke="#FFFFFF" strokeWidth={1.6} fill="none" />
+            <path d="M5 14 h20" stroke="#FFFFFF" strokeWidth={1.3} strokeLinecap="round" />
+          </svg>
+        </div>
+      );
+    case "education":
+      return (
+        <div style={{ ...MAC_DESKTOP_ICON_BOX, background: "#30D158" }}>
+          <svg width={34} height={28} viewBox="0 0 34 28" aria-hidden>
+            <polygon points="17,6 4,12 30,12" fill="#FFFFFF" />
+            <rect x="4" y="12" width="26" height="4" fill="#FFFFFF" />
+            <line x1="17" y1="16" x2="17" y2="22" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" />
+            <circle cx="17" cy="23" r="2" fill="#FFFFFF" />
+          </svg>
+        </div>
+      );
+    case "resume":
+      return (
+        <div style={{ ...MAC_DESKTOP_ICON_BOX, background: "#FF3B30" }}>
+          <svg width={28} height={32} viewBox="0 0 28 32" fill="none" aria-hidden>
+            <rect x="5" y="4" width="18" height="24" rx={1} stroke="#FFFFFF" strokeWidth={1.5} fill="none" />
+            <path d="M17 4 L23 4 L23 10 L17 10 Z" fill="#FFFFFF" />
+            <line x1="8" y1="15" x2="20" y2="15" stroke="#FFFFFF" strokeWidth={1.2} strokeLinecap="round" />
+            <line x1="8" y1="19" x2="20" y2="19" stroke="#FFFFFF" strokeWidth={1.2} strokeLinecap="round" />
+            <line x1="8" y1="23" x2="17" y2="23" stroke="#FFFFFF" strokeWidth={1.2} strokeLinecap="round" />
+          </svg>
+        </div>
+      );
+    case "contact":
+      return (
+        <div style={{ ...MAC_DESKTOP_ICON_BOX, background: "#32ADE6" }}>
+          <svg width={32} height={24} viewBox="0 0 32 24" fill="none" aria-hidden>
+            <rect x="3" y="5" width="26" height="16" rx={1} stroke="#FFFFFF" strokeWidth={1.5} fill="none" />
+            <path
+              d="M3 5 L16 14 L29 5"
+              stroke="#FFFFFF"
+              strokeWidth={1.5}
+              strokeLinejoin="round"
+              fill="none"
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
+      );
+    case "hobbies":
+      return (
+        <div style={{ ...MAC_DESKTOP_ICON_BOX, background: "#FF2D55" }}>
+          <svg width={28} height={26} viewBox="0 0 28 26" aria-hidden>
+            <path
+              fill="#FFFFFF"
+              d="M14 23 C6 17 2 13 2 8 C2 5 4 3 7 3 C9.5 3 11.5 4.5 13 6.5 C14.5 4.5 16.5 3 19 3 C22 3 24 5 24 8 C24 13 20 17 12 23 Z"
+            />
+          </svg>
+        </div>
+      );
+    case "settings":
+      return (
+        <div style={{ ...MAC_DESKTOP_ICON_BOX, background: "#3A3A3C" }}>
+          <svg width={30} height={30} viewBox="0 0 24 24" aria-hidden>
+            <path
+              fill="#FFFFFF"
+              d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.495.495 0 0 0-.59.22l-1.92 3.32c-.12.21-.07.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-1.97-1.58zm-7.14 2.66a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"
+            />
+            <circle cx="12" cy="12" r="3.5" fill="#3A3A3C" />
+          </svg>
+        </div>
+      );
+    default:
+      return <div style={{ ...MAC_DESKTOP_ICON_BOX, background: "#3A3A3C" }} />;
+  }
 }
 
 function iconKindFromId(id: string): "folder" | "file" | "envelope" | "control" {
