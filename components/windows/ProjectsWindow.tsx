@@ -1,5 +1,8 @@
-import type { RefObject } from "react";
-import { useMemo, useState } from "react";
+"use client";
+
+import type { CSSProperties, RefObject } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, useDragControls } from "framer-motion";
 
 type WinModel = {
@@ -105,7 +108,12 @@ function LandscapePlaceholderIcon() {
   );
 }
 
-type ProjectVisual = { kind: "video" | "photo" };
+type ProjectVisual = {
+  kind: "video" | "photo";
+  /** Public URL under `/public`, e.g. `/a10cadss.jpg` */
+  src?: string;
+  caption?: string;
+};
 
 type ProjectEntry = {
   name: string;
@@ -158,9 +166,9 @@ const PROJECTS: ProjectEntry[] = [
     bullets: [
       "— took own measurements and references to reconstruct airframe geometry",
       "— modeled full exterior including fuselage, wings, engines, and landing gear",
-      "— built entirely from scratch as a personal challenge in precision modeling",
+      "— built entirely from scratch as a challenge in precision modeling",
     ],
-    visuals: [{ kind: "photo" }],
+    visuals: [{ kind: "photo", src: "/a10cadss.jpg", caption: "a-10 cad model" }],
   },
   {
     name: "bottle cap launcher",
@@ -177,11 +185,25 @@ const PROJECTS: ProjectEntry[] = [
 ];
 
 function VisualPlaceholder({ visual, figureIndex }: { visual: ProjectVisual; figureIndex: number }) {
-  const caption = `fig ${figureIndex}: [ add caption ]`;
-  return (
-    <>
-      <div
-        style={{
+  const [expanded, setExpanded] = useState(false);
+  const caption =
+    visual.caption != null && visual.caption !== ""
+      ? `fig ${figureIndex}: ${visual.caption}`
+      : `fig ${figureIndex}: [ add caption ]`;
+  const showPhoto = visual.kind === "photo" && visual.src;
+
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setExpanded(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [expanded]);
+
+  const thumbFrameStyle: CSSProperties =
+    visual.kind === "video" || !showPhoto
+      ? {
           width: 160,
           height: 120,
           background: "#D8D8D8",
@@ -190,9 +212,89 @@ function VisualPlaceholder({ visual, figureIndex }: { visual: ProjectVisual; fig
           alignItems: "center",
           justifyContent: "center",
           boxSizing: "border-box",
-        }}
-      >
-        {visual.kind === "video" ? <PlayTriangleIcon /> : <LandscapePlaceholderIcon />}
+          overflow: "hidden",
+        }
+      : {
+          display: "inline-block",
+          background: "#D8D8D8",
+          border: "1px solid #A0A0A0",
+          boxSizing: "border-box",
+          lineHeight: 0,
+          maxWidth: "100%",
+        };
+
+  const lightbox =
+    expanded && showPhoto && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            role="presentation"
+            onClick={() => setExpanded(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 999999,
+              background: "rgba(0,0,0,0.82)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 24,
+              cursor: "pointer",
+              boxSizing: "border-box",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={visual.src}
+              alt=""
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxWidth: "min(92vw, 1600px)",
+                maxHeight: "92vh",
+                width: "auto",
+                height: "auto",
+                objectFit: "contain",
+                cursor: "default",
+                border: "2px solid #C0C0C0",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>,
+          document.body
+        )
+      : null;
+
+  return (
+    <>
+      {lightbox}
+      <div style={thumbFrameStyle}>
+        {visual.kind === "video" ? (
+          <PlayTriangleIcon />
+        ) : showPhoto ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={visual.src}
+            alt=""
+            role="button"
+            tabIndex={0}
+            onClick={() => setExpanded(true)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setExpanded(true);
+              }
+            }}
+            style={{
+              display: "block",
+              width: "auto",
+              height: "auto",
+              maxWidth: "min(100%, 420px)",
+              maxHeight: 280,
+              cursor: "pointer",
+            }}
+          />
+        ) : (
+          <LandscapePlaceholderIcon />
+        )}
       </div>
       <div
         style={{
@@ -206,6 +308,7 @@ function VisualPlaceholder({ visual, figureIndex }: { visual: ProjectVisual; fig
         }}
       >
         {caption}
+        {showPhoto ? " — click to expand" : null}
       </div>
     </>
   );

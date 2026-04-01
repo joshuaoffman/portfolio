@@ -16,8 +16,8 @@ export type OSContextValue = {
 const OSContext = createContext<OSContextValue | null>(null);
 
 export function OSProvider({ children }: { children: ReactNode }) {
-  /** No default OS — first visit shows OSPicker; session restores preferred OS on return visits. */
-  const [activeOS, setActiveOSState] = useState<OSName | null>(null);
+  /** Default Windows 95; sessionStorage can override after hydrate (e.g. last theme from Settings). */
+  const [activeOS, setActiveOSState] = useState<OSName | null>("windows95");
 
   useLayoutEffect(() => {
     const stored = window.sessionStorage.getItem("activeOS");

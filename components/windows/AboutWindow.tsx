@@ -133,7 +133,7 @@ export default function AboutWindow() {
           <div style={{ marginTop: 14, height: 1, background: "#E0E0E0", width: "100%" }} />
 
           <div style={{ marginTop: 12, fontSize: 9, color: "#888888" }}>
-            last updated: 2025 — university of ottawa, faculty of engineering
+            last updated: 2026 — university of ottawa, faculty of engineering
           </div>
         </div>
       </div>

@@ -15,6 +15,7 @@ import ExperienceWindow, { ExperienceExplorerContent } from "@/components/window
 import WelcomeWindow from "@/components/windows/WelcomeWindow";
 import GuestbookWindow from "@/components/windows/GuestbookWindow";
 import AboutWindow from "@/components/windows/AboutWindow";
+import ContactWindow from "@/components/windows/ContactWindow";
 import SettingsPanel from "@/components/SettingsPanel";
 
 /** Desktop icon positions (px, absolute within desktop area). */
@@ -62,12 +63,12 @@ export default function DesktopPage() {
   const showBoot = currentOS !== null && !bootComplete;
 
   const TASKBAR_HEIGHT_PX = 28;
-  const WINDOW_DEFAULT_SIZE = { width: 480, height: 320 };
-  const RESUME_WINDOW_SIZE = { width: 680, height: 520 };
-  const PROJECTS_WINDOW_SIZE = { width: 920, height: 580 };
-  const EXPERIENCE_WINDOW_SIZE = { width: 780, height: 500 };
-  const HOBBIES_WINDOW_SIZE = { width: 760, height: 540 };
-  const NOTES_WINDOW_SIZE = { width: 440, height: 560 };
+  const WINDOW_DEFAULT_SIZE = { width: 700, height: 550 };
+  const RESUME_WINDOW_SIZE = { width: 800, height: 650 };
+  const PROJECTS_WINDOW_SIZE = { width: 700, height: 550 };
+  const EXPERIENCE_WINDOW_SIZE = { width: 700, height: 550 };
+  const HOBBIES_WINDOW_SIZE = { width: 700, height: 550 };
+  const NOTES_WINDOW_SIZE = { width: 700, height: 550 };
 
   const desktopAreaRef = useRef<HTMLDivElement | null>(null);
   const [desktopArea, setDesktopArea] = useState(() => ({
@@ -260,7 +261,7 @@ export default function DesktopPage() {
   } = useWindowManager({
     desktopArea,
     windowTitles,
-    defaultWindowSize: { width: 480, height: 320 },
+    defaultWindowSize: { width: 700, height: 550 },
   });
 
   useEffect(() => {
@@ -285,7 +286,7 @@ export default function DesktopPage() {
     );
   }, [currentOS, desktopArea.width, desktopArea.height]);
 
-  const WELCOME_WINDOW_SIZE = { width: 520, height: 300 };
+  const WELCOME_WINDOW_SIZE = { width: 1300, height: 750 };
   const welcomeShownAfterBootRef = useRef(false);
 
   useEffect(() => {
@@ -297,12 +298,17 @@ export default function DesktopPage() {
     const t = window.setTimeout(() => {
       if (welcomeShownAfterBootRef.current) return;
       welcomeShownAfterBootRef.current = true;
-      const x = Math.round(desktopArea.width * 0.6 - WELCOME_WINDOW_SIZE.width / 2);
-      const y = Math.round(desktopArea.height * 0.08);
+      const dw = Math.max(1, desktopArea.width);
+      const dh = Math.max(1, desktopArea.height);
+      const ww = Math.min(WELCOME_WINDOW_SIZE.width, dw);
+      const wh = Math.min(WELCOME_WINDOW_SIZE.height, dh);
+      const x = Math.round((dw - ww) / 2);
+      const y = Math.round((dh - wh) / 2);
       const pos = {
-        x: clamp(x, 0, Math.max(0, desktopArea.width - WELCOME_WINDOW_SIZE.width)),
-        y: clamp(y, 0, Math.max(0, desktopArea.height - WELCOME_WINDOW_SIZE.height)),
+        x: clamp(x, 0, Math.max(0, dw - ww)),
+        y: clamp(y, 0, Math.max(0, dh - wh)),
       };
+      const welcomeSize = { width: ww, height: wh };
       if (currentOS === "windows95") {
         setOpenWindows((prev) => {
           if (prev.some((w) => w.id === "welcome")) return prev;
@@ -314,7 +320,7 @@ export default function DesktopPage() {
               id: "welcome",
               title: windowTitles.welcome,
               position: pos,
-              size: { ...WELCOME_WINDOW_SIZE },
+              size: welcomeSize,
               zIndex: nextZ,
               minimized: false,
               maximized: false,
@@ -323,7 +329,7 @@ export default function DesktopPage() {
         });
         setFocusedWindowId("welcome");
       } else {
-        themedOpenWindow("welcome", { position: pos, size: { ...WELCOME_WINDOW_SIZE } });
+        themedOpenWindow("welcome", { position: pos, size: welcomeSize });
       }
     }, 600);
     return () => window.clearTimeout(t);
@@ -595,6 +601,9 @@ export default function DesktopPage() {
       }
       if (id === "about") {
         return <AboutWindow />;
+      }
+      if (id === "contact") {
+        return <ContactWindow />;
       }
       if (id === "projects") {
         return (
@@ -1106,6 +1115,19 @@ export default function DesktopPage() {
                   onMove={(x, y) => moveWindow(win.id, x, y)}
                 >
                   <AboutWindow />
+                </Window>
+              ) : win.id === "contact" ? (
+                <Window
+                  key={win.id}
+                  win={win}
+                  desktopConstraintsRef={desktopAreaRef}
+                  onFocus={() => focusWindow(win.id)}
+                  onClose={() => closeWindow(win.id)}
+                  onMinimize={() => minimizeWindow(win.id)}
+                  onMaximize={() => maximizeWindow(win.id)}
+                  onMove={(x, y) => moveWindow(win.id, x, y)}
+                >
+                  <ContactWindow />
                 </Window>
               ) : win.id === "projects" ? (
                 <ProjectsWindow

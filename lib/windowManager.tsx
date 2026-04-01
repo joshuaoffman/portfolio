@@ -26,7 +26,7 @@ function clamp(n: number, min: number, max: number) {
 export function useWindowManager({
   desktopArea,
   windowTitles,
-  defaultWindowSize = { width: 400, height: 300 },
+  defaultWindowSize = { width: 700, height: 550 },
 }: UseWindowManagerArgs) {
   const [openWindows, setOpenWindows] = useState<Win95Window[]>([]);
   const [focusedWindowId, setFocusedWindowId] = useState<string | null>(null);

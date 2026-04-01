@@ -138,6 +138,7 @@ export default function GuestbookWindow({ theme }: GuestbookWindowProps) {
         return;
       }
       if (!res.ok) {
+        if (typeof data.error === "string") setProfanityMsg(data.error);
         setSubmitting(false);
         return;
       }

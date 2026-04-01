@@ -1,5 +1,5 @@
-import OSPicker from "@/components/OSPicker";
+import { redirect } from "next/navigation";
 
 export default function HomePage() {
-  return <OSPicker />;
+  redirect("/desktop");
 }

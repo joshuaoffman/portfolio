@@ -13,8 +13,8 @@ function buttonStyles(theme: OSName): CSSProperties {
   const base: CSSProperties = {
     flex: 1,
     fontFamily: '"IBM Plex Mono", monospace',
-    fontSize: 11,
-    padding: "6px 10px",
+    fontSize: 14,
+    padding: "8px 14px",
     cursor: "default",
     color: "#000000",
     boxSizing: "border-box",
@@ -52,7 +52,7 @@ export default function WelcomeWindow({ theme, onClose, onOpenResume }: WelcomeW
       style={{
         height: "100%",
         boxSizing: "border-box",
-        padding: "12px 14px",
+        padding: "16px 20px",
         display: "flex",
         flexDirection: "column",
         gap: 0,
@@ -60,19 +60,19 @@ export default function WelcomeWindow({ theme, onClose, onOpenResume }: WelcomeW
         fontFamily: '"IBM Plex Mono", monospace',
       }}
     >
-      <div style={{ fontSize: 13, fontWeight: 700, color: "#000000", lineHeight: 1.2, textTransform: "lowercase" }}>
+      <div style={{ fontSize: 18, fontWeight: 700, color: "#000000", lineHeight: 1.25, textTransform: "lowercase" }}>
         welcome to joof.dev
       </div>
-      <div style={{ marginTop: 10 }}>{divider}</div>
+      <div style={{ marginTop: 12 }}>{divider}</div>
       <div
         style={{
-          marginTop: 10,
-          fontSize: 11,
+          marginTop: 12,
+          fontSize: 15,
           color: "#333333",
-          lineHeight: 1.45,
+          lineHeight: 1.55,
           display: "flex",
           flexDirection: "column",
-          gap: 8,
+          gap: 10,
           textTransform: "lowercase",
           flex: 1,
           minHeight: 0,
@@ -86,8 +86,8 @@ export default function WelcomeWindow({ theme, onClose, onOpenResume }: WelcomeW
           every theme.
         </span>
       </div>
-      <div style={{ marginTop: 12 }}>{divider}</div>
-      <div style={{ marginTop: 12, display: "flex", flexDirection: "row", gap: 10 }}>
+      <div style={{ marginTop: 14 }}>{divider}</div>
+      <div style={{ marginTop: 14, display: "flex", flexDirection: "row", gap: 12 }}>
         <button type="button" onClick={onOpenResume} style={buttonStyles(theme)}>
           open resume
         </button>
