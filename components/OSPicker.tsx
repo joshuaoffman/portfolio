@@ -19,8 +19,16 @@ const OS_OPTIONS: OsOption[] = [
 
 export default function OSPicker() {
   const router = useRouter();
-  const { setActiveOS } = useOS();
+  const { activeOS, setActiveOS } = useOS();
   const [hovered, setHovered] = useState<OSName | null>(null);
+
+  useLayoutEffect(() => {
+    if (activeOS) router.replace("/desktop");
+  }, [activeOS, router]);
+
+  if (activeOS) {
+    return <div className="h-screen w-screen bg-[#0a0a0a]" aria-hidden />;
+  }
 
   return (
     <motion.div
