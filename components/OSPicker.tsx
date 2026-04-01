@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { OSName, useOS } from "@/lib/osContext";
 
 type OsOption = {
@@ -15,7 +15,6 @@ const OS_OPTIONS: OsOption[] = [
   { value: "windows95", label: "Windows 95", yearLabel: "1995" },
   { value: "windowsxp", label: "Windows XP", yearLabel: "2001" },
   { value: "windows10", label: "Windows 10", yearLabel: "2015" },
-  { value: "macos", label: "macOS", yearLabel: "2001–present" },
 ];
 
 export default function OSPicker() {
@@ -30,8 +29,15 @@ export default function OSPicker() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.28 }}
     >
-      <div className="absolute left-6 top-4 text-[#444444] text-xs">
-        joshua offman
+      <div className="absolute left-6 top-4 select-none">
+        <div
+          className="text-[#e8e8e8] text-sm font-bold tracking-[0.12em]"
+          style={{ fontFamily: '"IBM Plex Mono", monospace' }}
+          aria-hidden
+        >
+          J.O
+        </div>
+        <div className="mt-1 text-[#444444] text-xs">joshua offman</div>
       </div>
 
       <div className="h-full flex flex-col items-center justify-center">
@@ -47,13 +53,13 @@ export default function OSPicker() {
               <button
                 key={opt.value}
                 type="button"
-                className="bg-transparent border-0 p-0 m-0 text-white text-sm leading-none cursor-pointer"
+                className="bg-transparent p-0 m-0 text-white text-sm leading-none cursor-pointer"
+                style={{ border: "none", padding: "6px 10px 8px" }}
                 onMouseEnter={() => setHovered(opt.value)}
                 onMouseLeave={() => setHovered(null)}
                 onFocus={() => setHovered(opt.value)}
                 onBlur={() => setHovered(null)}
                 onClick={() => {
-                  // Debug aid to verify selected OS flow.
                   // eslint-disable-next-line no-console
                   console.log("selected os:", opt.value);
                   setActiveOS(opt.value);

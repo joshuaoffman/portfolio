@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { motion, useDragControls } from "framer-motion";
 
@@ -21,6 +21,7 @@ type WindowProps = {
   onMaximize: () => void;
   onMove: (x: number, y: number) => void;
   onResize?: (width: number, height: number) => void;
+  children?: ReactNode;
 };
 
 const fontFamily = '"IBM Plex Mono", monospace';
@@ -86,6 +87,7 @@ export default function Window({
   onMaximize,
   onMove,
   onResize,
+  children,
 }: WindowProps) {
   const dragControls = useDragControls();
   const [pressed, setPressed] = useState<null | "min" | "max" | "close">(null);
@@ -333,18 +335,19 @@ export default function Window({
             borderBottom: "1px solid #FFFFFF",
             borderRight: "1px solid #FFFFFF",
             boxSizing: "border-box",
-            padding: 8,
+            padding: children ? 0 : 8,
             overflow: "auto",
             fontFamily,
             fontSize: 11,
             color: "#000000",
+            minHeight: 0,
           }}
           onPointerDown={(e) => {
             e.stopPropagation();
             onFocus();
           }}
         >
-          test
+          {children ?? "test"}
         </div>
 
         {/* Right edge resize handle */}

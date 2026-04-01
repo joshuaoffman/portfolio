@@ -37,7 +37,7 @@ const Win10Boot = ({ onComplete }: { onComplete: () => void }) => {
 
   useEffect(() => {
     if (phase !== 0) return;
-    const t = window.setTimeout(() => setPhase(1), 800);
+    const t = window.setTimeout(() => setPhase(1), 400);
     return () => window.clearTimeout(t);
   }, [phase]);
 
@@ -49,7 +49,7 @@ const Win10Boot = ({ onComplete }: { onComplete: () => void }) => {
 
   useEffect(() => {
     if (phase !== 2) return;
-    const t = window.setTimeout(() => setPhase(3), 2400);
+    const t = window.setTimeout(() => setPhase(3), 1400);
     return () => window.clearTimeout(t);
   }, [phase]);
 
@@ -80,7 +80,7 @@ const Win10Boot = ({ onComplete }: { onComplete: () => void }) => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.7, ease: "linear" }}
+          transition={{ duration: 0.4, ease: "linear" }}
         >
           <svg width="64" height="64" viewBox="0 0 64 64" shapeRendering="crispEdges">
             <rect x="0" y="0" width="30" height="30" fill="#F25022" />
@@ -140,144 +140,6 @@ const Win10Boot = ({ onComplete }: { onComplete: () => void }) => {
 
   // Phase 3 - black and complete
   return <div style={{ position: "fixed", inset: 0, background: "#000000" }} />;
-};
-
-const MAC_BOOT_APPLE_PATH =
-  "M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.2 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 70.1 0 128.4 46.2 172.5 46.2 42.8 0 109.6-49 191.4-49 30.9 0 108.2 2.6 168.1 75.4zm-216.6-25.7c-6.5-34.5-18.2-78.1-45.6-113.6-22.4-29.2-58.5-52.7-96.9-52.7-2.6 0-5.2.3-7.8.6 2.6 36.1 18.2 79.7 46.2 115.9 25 32.6 63.8 58.5 104.1 49.8z";
-
-function MacAppleLogo() {
-  return (
-    <svg width={70} height={86} viewBox="0 0 814 1000" fill="none" aria-hidden>
-      <path fill="#FFFFFF" d={MAC_BOOT_APPLE_PATH} />
-    </svg>
-  );
-}
-
-const MacBoot = ({ onComplete }: { onComplete: () => void }) => {
-  console.log("MacBoot mounted");
-  const [phase, setPhase] = useState(0);
-  const completeCalled = useRef(false);
-  const onCompleteRef = useRef(onComplete);
-
-  useEffect(() => {
-    onCompleteRef.current = onComplete;
-  }, [onComplete]);
-
-  useEffect(() => {
-    const t = window.setTimeout(() => {
-      if (completeCalled.current) return;
-      completeCalled.current = true;
-      onCompleteRef.current();
-    }, 12000);
-    return () => window.clearTimeout(t);
-  }, []);
-
-  useEffect(() => {
-    if (phase !== 0) return;
-    const t = window.setTimeout(() => setPhase(1), 600);
-    return () => window.clearTimeout(t);
-  }, [phase]);
-
-  useEffect(() => {
-    if (phase !== 1) return;
-    const t = window.setTimeout(() => setPhase(2), 1000);
-    return () => window.clearTimeout(t);
-  }, [phase]);
-
-  useEffect(() => {
-    if (phase !== 2) return;
-    const t = window.setTimeout(() => setPhase(3), 3500);
-    return () => window.clearTimeout(t);
-  }, [phase]);
-
-  useEffect(() => {
-    if (phase !== 3) return;
-    const t = window.setTimeout(() => {
-      if (completeCalled.current) return;
-      completeCalled.current = true;
-      onCompleteRef.current();
-    }, 600);
-    return () => window.clearTimeout(t);
-  }, [phase]);
-
-  if (phase === 0) {
-    return <div style={{ position: "fixed", inset: 0, background: "#000000" }} />;
-  }
-
-  if (phase === 1) {
-    return (
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          background: "#000000",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8 }}
-        >
-          <MacAppleLogo />
-        </motion.div>
-      </div>
-    );
-  }
-
-  if (phase === 2) {
-    return (
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          background: "#000000",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <MacAppleLogo />
-        <div
-          style={{
-            marginTop: 48,
-            width: 200,
-            height: 4,
-            background: "#3A3A3A",
-            borderRadius: 2,
-            overflow: "hidden",
-          }}
-        >
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: 200 }}
-            transition={{ duration: 2.8, ease: "easeInOut" }}
-            style={{
-              height: 4,
-              background: "#FFFFFF",
-              borderRadius: 2,
-            }}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <motion.div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "#FFFFFF",
-      }}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    />
-  );
 };
 
 const XPBoot = ({ onComplete }: { onComplete: () => void }) => {
@@ -598,7 +460,7 @@ const BIOS_LINES = [
   "Initializing Plug and Play cards...",
   "PnP BIOS detected",
   "",
-  "Press DEL to continue...",
+  "Starting boot loader...",
 ];
 
 const DOS_LINES = [
@@ -622,7 +484,6 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
   const osIsWindows95 = os === "windows95";
   const osIsWindowsXP = os === "windowsxp";
   const osIsWindows10 = os === "windows10";
-  const osIsMacOS = os === "macos";
 
   const [phase, setPhase] = useState<1 | 2 | 3 | 4>(1);
 
@@ -630,7 +491,6 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
   const [biosLineCount, setBiosLineCount] = useState(() =>
     osIsWindows95 ? 1 : 0
   );
-  const [biosCursorOn, setBiosCursorOn] = useState(false);
 
   // Phase 2
   const [dosLineCount, setDosLineCount] = useState(0);
@@ -638,9 +498,6 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
   // Phase 3
   const [logoVisible, setLogoVisible] = useState(false);
   const [progressFilled, setProgressFilled] = useState(0);
-
-  /** Win95 BIOS: same handler as Delete key — wired to clickable “DEL”. */
-  const proceedAfterDelRef = useRef<(() => void) | null>(null);
 
   const biosLines = useMemo(() => BIOS_LINES, []);
   const dosLines = useMemo(() => DOS_LINES, []);
@@ -665,123 +522,87 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
     setPhase(1);
 
     // ---- Phase 1: BIOS ----
-    setBiosCursorOn(false);
     setBiosLineCount(1);
 
     let cancelled = false;
-    let cursorInterval: number | null = null;
-    let onKeyDownHandler: ((e: KeyboardEvent) => void) | null = null;
     const timeouts: number[] = [];
 
-    const startCursorAndWaitForDel = () => {
-      if (cancelled) return;
+    let continuedFromBios = false;
 
-      setBiosCursorOn(true);
+    const proceedToDosPhase = () => {
+      if (cancelled || continuedFromBios) return;
+      continuedFromBios = true;
 
-      if (cursorInterval !== null) {
-        window.clearInterval(cursorInterval);
-      }
-      cursorInterval = window.setInterval(() => {
-        setBiosCursorOn((v) => !v);
-      }, 500);
+      // ---- Phase 2: DOS ----
+      setPhase(2);
 
-      let continuedFromBios = false;
+      setDosLineCount(1);
 
-      const proceedAfterDel = () => {
-        if (cancelled || continuedFromBios) return;
-        continuedFromBios = true;
+      // Reveal DOS lines one-by-one with 30ms between each.
+      for (let i = 1; i < dosLines.length; i++) {
+        timeouts.push(
+          window.setTimeout(() => {
+            if (cancelled) return;
+            setDosLineCount(i + 1);
 
-        if (onKeyDownHandler) {
-          window.removeEventListener("keydown", onKeyDownHandler);
-        }
+            // After last line appears, wait 400ms then Phase 3.
+            if (i === dosLines.length - 1) {
+              timeouts.push(
+                window.setTimeout(() => {
+                  if (cancelled) return;
 
-        if (cursorInterval !== null) {
-          window.clearInterval(cursorInterval);
-          cursorInterval = null;
-        }
-        setBiosCursorOn(false);
+                  // ---- Phase 3: Windows 95 logo ----
+                  setPhase(3);
+                  setLogoVisible(false);
+                  setProgressFilled(0);
 
-        // ---- Phase 2: DOS ----
-        setPhase(2);
-
-        setDosLineCount(1);
-
-        // Reveal DOS lines one-by-one with 60ms between each.
-        for (let i = 1; i < dosLines.length; i++) {
-          timeouts.push(
-            window.setTimeout(() => {
-              if (cancelled) return;
-              setDosLineCount(i + 1);
-
-              // After last line appears, wait 400ms then Phase 3.
-              if (i === dosLines.length - 1) {
-                timeouts.push(
+                  // Trigger fade-in (300ms). Delay ensures opacity starts at 0.
                   window.setTimeout(() => {
                     if (cancelled) return;
+                    setLogoVisible(true);
 
-                    // ---- Phase 3: Windows 95 logo ----
-                    setPhase(3);
-                    setLogoVisible(false);
-                    setProgressFilled(0);
+                    // Progress bar starts 400ms after the logo appears.
+                    timeouts.push(
+                      window.setTimeout(() => {
+                        if (cancelled) return;
 
-                    // Trigger fade-in (300ms). Delay ensures opacity starts at 0.
-                    window.setTimeout(() => {
-                      if (cancelled) return;
-                      setLogoVisible(true);
-
-                      // Progress bar starts 400ms after the logo appears.
-                      timeouts.push(
-                        window.setTimeout(() => {
-                          if (cancelled) return;
-
-                          // Snap-on segments with 100ms delay between each.
-                          setProgressFilled(1);
-                          for (let seg = 1; seg < PROGRESS_SEGMENTS; seg++) {
-                            timeouts.push(
-                              window.setTimeout(() => {
-                                if (cancelled) return;
-                                setProgressFilled(seg + 1);
-                              }, seg * 100)
-                            );
-                          }
-
-                          // After all segments fill, wait 500ms then Phase 4.
+                        // Snap-on segments with 50ms delay between each.
+                        setProgressFilled(1);
+                        for (let seg = 1; seg < PROGRESS_SEGMENTS; seg++) {
                           timeouts.push(
                             window.setTimeout(() => {
                               if (cancelled) return;
-                              setPhase(4);
-                            }, (PROGRESS_SEGMENTS - 1) * 100 + 500)
+                              setProgressFilled(seg + 1);
+                            }, seg * 50)
                           );
-                        }, 400)
-                      );
-                    }, 0);
-                  }, 400)
-                );
-              }
-            }, i * 60)
-          );
-        }
+                        }
 
-        // If there is only one DOS line (not expected), still go forward.
-        if (dosLines.length === 1) {
-          timeouts.push(
-            window.setTimeout(() => {
-              if (cancelled) return;
-              setPhase(3);
-            }, 400)
-          );
-        }
-      };
+                        // After all segments fill, wait 500ms then Phase 4.
+                        timeouts.push(
+                          window.setTimeout(() => {
+                            if (cancelled) return;
+                            setPhase(4);
+                          }, (PROGRESS_SEGMENTS - 1) * 50 + 500)
+                        );
+                      }, 400)
+                    );
+                  }, 0);
+                }, 400)
+              );
+            }
+          }, i * 30)
+        );
+      }
 
-      proceedAfterDelRef.current = proceedAfterDel;
-
-      onKeyDownHandler = (e: KeyboardEvent) => {
-        if (cancelled) return;
-        if (e.key !== "Delete" && e.key !== "Del") return;
-        proceedAfterDel();
-      };
-
-      window.addEventListener("keydown", onKeyDownHandler);
+      // If there is only one DOS line (not expected), still go forward.
+      if (dosLines.length === 1) {
+        timeouts.push(
+          window.setTimeout(() => {
+            if (cancelled) return;
+            setPhase(3);
+          }, 400)
+        );
+      }
     };
 
     // Reveal BIOS lines. First line is visible immediately.
@@ -792,7 +613,12 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
           setBiosLineCount(i + 1);
 
           if (i === biosLines.length - 1) {
-            startCursorAndWaitForDel();
+            timeouts.push(
+              window.setTimeout(() => {
+                if (cancelled) return;
+                proceedToDosPhase();
+              }, 2000)
+            );
           }
         }, i * 80)
       );
@@ -800,13 +626,6 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
 
     return () => {
       cancelled = true;
-      proceedAfterDelRef.current = null;
-      if (cursorInterval !== null) {
-        window.clearInterval(cursorInterval);
-      }
-      if (onKeyDownHandler) {
-        window.removeEventListener("keydown", onKeyDownHandler);
-      }
       timeouts.forEach((t) => window.clearTimeout(t));
     };
   }, [dosLines, biosLines, osIsWindows95]);
@@ -835,18 +654,6 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
     );
   }
 
-  if (osIsMacOS) {
-    return (
-      <MacBoot
-        onComplete={() => {
-          if (hasCompletedRef.current) return;
-          hasCompletedRef.current = true;
-          onComplete();
-        }}
-      />
-    );
-  }
-
   // Guard: this component is only meant for Windows 95.
   if (!osIsWindows95) {
     return null;
@@ -865,37 +672,9 @@ export default function BootSequence({ os, onComplete }: BootSequenceProps) {
                 const visible = idx < biosLineCount;
                 if (!visible) return null;
 
-                const isFinal = idx === biosLines.length - 1;
-                const showCursor = isFinal && biosCursorOn;
-
                 return (
                   <span key={idx}>
-                    {isFinal ? (
-                      <>
-                        Press{" "}
-                        <button
-                          type="button"
-                          onClick={() => proceedAfterDelRef.current?.()}
-                          style={{
-                            padding: 0,
-                            margin: 0,
-                            border: "none",
-                            background: "transparent",
-                            color: "inherit",
-                            font: "inherit",
-                            cursor: "pointer",
-                            textDecoration: "underline",
-                          }}
-                          aria-label="Continue (same as Delete key)"
-                        >
-                          DEL
-                        </button>
-                        {" "}to continue...
-                      </>
-                    ) : (
-                      line
-                    )}
-                    {showCursor ? "█" : null}
+                    {line}
                     {"\n"}
                   </span>
                 );

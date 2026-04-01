@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useState } from "react";
 
-export type OSName = "windows95" | "windowsxp" | "windows10" | "macos";
+export type OSName = "windows95" | "windowsxp" | "windows10";
 
 export type OSContextValue = {
   activeOS: OSName | null;
@@ -16,12 +16,16 @@ export type OSContextValue = {
 const OSContext = createContext<OSContextValue | null>(null);
 
 export function OSProvider({ children }: { children: ReactNode }) {
+  /** No default OS — first visit shows OSPicker; session restores preferred OS on return visits. */
   const [activeOS, setActiveOSState] = useState<OSName | null>(null);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  useLayoutEffect(() => {
     const stored = window.sessionStorage.getItem("activeOS");
-    if (stored === "windows95" || stored === "windowsxp" || stored === "windows10" || stored === "macos") {
+    if (stored === "macos") {
+      window.sessionStorage.removeItem("activeOS");
+      return;
+    }
+    if (stored === "windows95" || stored === "windowsxp" || stored === "windows10") {
       setActiveOSState(stored);
     }
   }, []);

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useDragControls } from "framer-motion";
-import type { CSSProperties, ReactNode, RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import BootSequence from "@/components/BootSequence";
@@ -9,8 +9,26 @@ import { useOS, type OSName } from "@/lib/osContext";
 import { useWindowManager, type Win95Window } from "@/lib/windowManager";
 import Window from "@/components/Window";
 import ResumeWindow from "@/components/windows/ResumeWindow";
-import HobbiesWindow from "@/components/windows/HobbiesWindow";
+import HobbiesWindow, { HobbiesExplorerContent } from "@/components/windows/HobbiesWindow";
+import ProjectsWindow, { ProjectsExplorerContent } from "@/components/windows/ProjectsWindow";
+import ExperienceWindow, { ExperienceExplorerContent } from "@/components/windows/ExperienceWindow";
+import WelcomeWindow from "@/components/windows/WelcomeWindow";
+import GuestbookWindow from "@/components/windows/GuestbookWindow";
+import AboutWindow from "@/components/windows/AboutWindow";
 import SettingsPanel from "@/components/SettingsPanel";
+
+/** Desktop icon positions (px, absolute within desktop area). */
+const DESKTOP_ICON_PX: Record<string, { left: number; top: number }> = {
+  about: { left: 60, top: 90 },
+  projects: { left: 380, top: 60 },
+  experience: { left: 700, top: 110 },
+  education: { left: 180, top: 310 },
+  resume: { left: 520, top: 240 },
+  contact: { left: 820, top: 320 },
+  hobbies: { left: 290, top: 480 },
+  notes: { left: 500, top: 430 },
+  settings: { left: 650, top: 430 },
+};
 
 export default function DesktopPage() {
   const router = useRouter();
@@ -21,10 +39,18 @@ export default function DesktopPage() {
   const [xpStartHover, setXpStartHover] = useState(false);
   const [xpStartPressed, setXpStartPressed] = useState(false);
   const [hoveredIconIdNon95, setHoveredIconIdNon95] = useState<string | null>(null);
+  const prevOsForBootRef = useRef<typeof currentOS>(undefined);
 
   useEffect(() => {
-    setBootComplete(false);
     setSettingsOpen(false);
+    if (prevOsForBootRef.current === undefined) {
+      prevOsForBootRef.current = currentOS;
+      return;
+    }
+    if (prevOsForBootRef.current !== currentOS) {
+      prevOsForBootRef.current = currentOS;
+      setBootComplete(false);
+    }
   }, [currentOS]);
 
   useEffect(() => {
@@ -38,6 +64,10 @@ export default function DesktopPage() {
   const TASKBAR_HEIGHT_PX = 28;
   const WINDOW_DEFAULT_SIZE = { width: 480, height: 320 };
   const RESUME_WINDOW_SIZE = { width: 680, height: 520 };
+  const PROJECTS_WINDOW_SIZE = { width: 920, height: 580 };
+  const EXPERIENCE_WINDOW_SIZE = { width: 780, height: 500 };
+  const HOBBIES_WINDOW_SIZE = { width: 760, height: 540 };
+  const NOTES_WINDOW_SIZE = { width: 440, height: 560 };
 
   const desktopAreaRef = useRef<HTMLDivElement | null>(null);
   const [desktopArea, setDesktopArea] = useState(() => ({
@@ -46,22 +76,22 @@ export default function DesktopPage() {
   }));
 
   useEffect(() => {
-    if (!desktopAreaRef.current) return;
+    if (currentOS == null) return;
     const el = desktopAreaRef.current;
+    if (!el) return;
 
     const update = () => {
-      setDesktopArea({
-        width: el.clientWidth,
-        height: el.clientHeight,
-      });
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      if (w < 16 || h < 16) return;
+      setDesktopArea({ width: w, height: h });
     };
 
     update();
-
     const ro = new ResizeObserver(() => update());
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [currentOS, bootComplete]);
 
   const [selectedIconId, setSelectedIconId] = useState<string | null>(null);
   const [selectedIconIdNon95, setSelectedIconIdNon95] = useState<string | null>(null);
@@ -78,7 +108,9 @@ export default function DesktopPage() {
       resume: "resume.pdf",
       contact: "contact",
       hobbies: "hobbies",
+      notes: "notes.txt",
       settings: "settings",
+      welcome: "welcome",
     }),
     []
   );
@@ -198,131 +230,13 @@ export default function DesktopPage() {
         { id: "resume", label: "resume.pdf", iconKind: "file" as const },
         { id: "contact", label: "contact", iconKind: "envelope" as const },
         { id: "hobbies", label: "hobbies", iconKind: "folder" as const },
+        { id: "notes", label: "notes.txt", iconKind: "notepad" as const },
         { id: "settings", label: "settings", iconKind: "control" as const },
       ] as const,
     []
   );
 
   type IconKind = (typeof ICONS)[number]["iconKind"];
-
-  const [iconPositions] = useState(() => {
-    const PRNG_SEED = 1995;
-    const cols = 4;
-    const rows = 3;
-    const safeLeftMinPct = 2;
-    const safeLeftMaxPct = 88;
-    const safeTopMinPct = 2;
-    const safeTopMaxPct = 78;
-
-    const iconBoxWpx = 96; // matches rendered icon container width
-    const iconBoxHpx = 58; // icon (32) + label area (approx)
-    const overlapMarginPx = 6;
-
-    // Deterministic PRNG so first-load placement is seeded.
-    function mulberry32(seed: number) {
-      let t = seed >>> 0;
-      return function rng() {
-        t += 0x6d2b79f5;
-        let r = Math.imul(t ^ (t >>> 15), 1 | t);
-        r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
-        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
-      };
-    }
-
-    const rng = mulberry32(PRNG_SEED);
-
-    function shuffleInPlace<T>(arr: T[]) {
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(rng() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-      return arr;
-    }
-
-    const safeLeftSpanPct = safeLeftMaxPct - safeLeftMinPct;
-    const safeTopSpanPct = safeTopMaxPct - safeTopMinPct;
-    const cellW = safeLeftSpanPct / cols;
-    const cellH = safeTopSpanPct / rows;
-
-    type Cell = { c: number; r: number };
-    const availableCells: Cell[] = [];
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        // Skip bottom-right cell.
-        if (r === rows - 1 && c === cols - 1) continue;
-        availableCells.push({ r, c });
-      }
-    }
-
-    shuffleInPlace(availableCells);
-    const chosenCells = availableCells.slice(0, ICONS.length);
-
-    const rects: Array<{ id: string; leftPx: number; topPx: number; rightPx: number; bottomPx: number }> = [];
-    const placements: Record<string, { leftPct: number; topPct: number }> = {};
-
-    function overlaps(a: { leftPx: number; topPx: number; rightPx: number; bottomPx: number }, b: typeof a) {
-      return (
-        a.leftPx < b.rightPx &&
-        a.rightPx > b.leftPx &&
-        a.topPx < b.bottomPx &&
-        a.bottomPx > b.topPx
-      );
-    }
-
-    for (let i = 0; i < ICONS.length; i++) {
-      const icon = ICONS[i];
-      const cell = chosenCells[i];
-
-      const centerLeftPct = safeLeftMinPct + cellW * (cell.c + 0.5);
-      const centerTopPct = safeTopMinPct + cellH * (cell.r + 0.5);
-
-      let placed = false;
-      for (let attempt = 0; attempt < 60; attempt++) {
-        // Offset within cell by up to 40% (center +/- 20% cell width).
-        const cellOffsetX = (rng() - 0.5) * 0.4 * cellW;
-        const cellOffsetY = (rng() - 0.5) * 0.4 * cellH;
-        let leftPct = centerLeftPct + cellOffsetX;
-        let topPct = centerTopPct + cellOffsetY;
-
-        // Extra jitter in px, converted to pct to stay in bound space.
-        const jitterXPx = rng() * 60 - 30;
-        const jitterYPx = rng() * 60 - 30;
-        leftPct += (jitterXPx / desktopArea.width) * 100;
-        topPct += (jitterYPx / desktopArea.height) * 100;
-
-        leftPct = clamp(leftPct, safeLeftMinPct, safeLeftMaxPct);
-        topPct = clamp(topPct, safeTopMinPct, safeTopMaxPct);
-
-        const leftPx = (leftPct / 100) * desktopArea.width;
-        const topPx = (topPct / 100) * desktopArea.height;
-
-        const candidate = {
-          id: icon.id,
-          leftPx: leftPx - overlapMarginPx,
-          topPx: topPx - overlapMarginPx,
-          rightPx: leftPx + iconBoxWpx + overlapMarginPx,
-          bottomPx: topPx + iconBoxHpx + overlapMarginPx,
-        };
-
-        const anyOverlap = rects.some((r) => overlaps(candidate, r));
-        if (anyOverlap) continue;
-
-        placements[icon.id] = { leftPct, topPct };
-        rects.push(candidate);
-        placed = true;
-        break;
-      }
-
-      // Fallback: if we failed to find a non-overlapping placement, still place something.
-      if (!placed) {
-        const leftPct = clamp(centerLeftPct, safeLeftMinPct, safeLeftMaxPct);
-        const topPct = clamp(centerTopPct, safeTopMinPct, safeTopMaxPct);
-        placements[icon.id] = { leftPct, topPct };
-      }
-    }
-
-    return placements;
-  });
 
   const [openingRect, setOpeningRect] = useState<null | {
     x: number;
@@ -354,16 +268,102 @@ export default function DesktopPage() {
     themedClampAllWindowsToDesktop();
   }, [currentOS, desktopArea, themedClampAllWindowsToDesktop]);
 
+  useEffect(() => {
+    if (currentOS !== "windows95") return;
+    const dw = Math.max(1, desktopArea.width);
+    const dh = Math.max(1, desktopArea.height);
+    setOpenWindows((prev) =>
+      prev.map((w) =>
+        w.maximized
+          ? {
+              ...w,
+              position: { x: 0, y: 0 },
+              size: { width: dw, height: dh },
+            }
+          : w
+      )
+    );
+  }, [currentOS, desktopArea.width, desktopArea.height]);
+
+  const WELCOME_WINDOW_SIZE = { width: 520, height: 300 };
+  const welcomeShownAfterBootRef = useRef(false);
+
+  useEffect(() => {
+    welcomeShownAfterBootRef.current = false;
+  }, [currentOS]);
+
+  useEffect(() => {
+    if (!bootComplete || !currentOS) return;
+    const t = window.setTimeout(() => {
+      if (welcomeShownAfterBootRef.current) return;
+      welcomeShownAfterBootRef.current = true;
+      const x = Math.round(desktopArea.width * 0.6 - WELCOME_WINDOW_SIZE.width / 2);
+      const y = Math.round(desktopArea.height * 0.08);
+      const pos = {
+        x: clamp(x, 0, Math.max(0, desktopArea.width - WELCOME_WINDOW_SIZE.width)),
+        y: clamp(y, 0, Math.max(0, desktopArea.height - WELCOME_WINDOW_SIZE.height)),
+      };
+      if (currentOS === "windows95") {
+        setOpenWindows((prev) => {
+          if (prev.some((w) => w.id === "welcome")) return prev;
+          const nextZ = nextZRef.current + 1;
+          nextZRef.current = nextZ;
+          return [
+            ...prev,
+            {
+              id: "welcome",
+              title: windowTitles.welcome,
+              position: pos,
+              size: { ...WELCOME_WINDOW_SIZE },
+              zIndex: nextZ,
+              minimized: false,
+              maximized: false,
+            },
+          ];
+        });
+        setFocusedWindowId("welcome");
+      } else {
+        themedOpenWindow("welcome", { position: pos, size: { ...WELCOME_WINDOW_SIZE } });
+      }
+    }, 600);
+    return () => window.clearTimeout(t);
+  }, [bootComplete, currentOS, desktopArea.height, desktopArea.width, themedOpenWindow, windowTitles.welcome]);
+
+  /** Centered window that never exceeds the desktop area (explorer-style windows). */
+  const explorerOpenRect = (targetWidth: number, targetHeight: number) => {
+    const m = 24;
+    const dw = Math.max(1, desktopArea.width);
+    const dh = Math.max(1, desktopArea.height);
+    const maxW = Math.max(1, dw - m);
+    const maxH = Math.max(1, dh - m);
+    let pw = Math.min(targetWidth, maxW);
+    let ph = Math.min(targetHeight, maxH);
+    const wantMinW = 300;
+    const wantMinH = 240;
+    pw = Math.max(pw, Math.min(wantMinW, maxW));
+    ph = Math.max(ph, Math.min(wantMinH, maxH));
+    pw = Math.min(pw, maxW);
+    ph = Math.min(ph, maxH);
+    const x = Math.round((dw - pw) / 2);
+    const y = Math.round((dh - ph) / 2);
+    return {
+      x: clamp(x, 0, Math.max(0, dw - pw)),
+      y: clamp(y, 0, Math.max(0, dh - ph)),
+      width: pw,
+      height: ph,
+    };
+  };
+
   const startOpenAnimationAndOpen = (iconId: string) => {
     if (currentOS !== "windows95") return;
 
     const token = ++openAnimTokenRef.current;
 
     const ICON_SIZE = 32;
-    const pos = iconPositions[iconId];
-    if (!pos) return;
-    const iconX = Math.round((desktopArea.width * pos.leftPct) / 100);
-    const iconY = Math.round((desktopArea.height * pos.topPct) / 100);
+    const iconPt = DESKTOP_ICON_PX[iconId];
+    if (!iconPt) return;
+    const iconX = iconPt.left;
+    const iconY = iconPt.top;
 
     const existing = openWindows.find((w) => w.id === iconId) ?? null;
 
@@ -380,30 +380,51 @@ export default function DesktopPage() {
     }
 
     const isResume = iconId === "resume";
+    const isProjects = iconId === "projects";
+    const isExperience = iconId === "experience";
+    const isHobbies = iconId === "hobbies";
+    const isNotes = iconId === "notes";
     const base = isResume
       ? {
-          x: clamp(
-            Math.round((desktopArea.width - RESUME_WINDOW_SIZE.width) / 2),
-            0,
-            Math.max(0, desktopArea.width - RESUME_WINDOW_SIZE.width)
-          ),
-          y: clamp(
-            Math.round((desktopArea.height - RESUME_WINDOW_SIZE.height) / 2),
-            0,
-            Math.max(0, desktopArea.height - RESUME_WINDOW_SIZE.height)
-          ),
-          width: RESUME_WINDOW_SIZE.width,
-          height: RESUME_WINDOW_SIZE.height,
+          x: 0,
+          y: 0,
+          width: desktopArea.width,
+          height: desktopArea.height,
         }
-      : centerRect();
-    const cascadeN = cascadeCountRef.current;
-    cascadeCountRef.current = cascadeN + 1;
+      : isProjects
+        ? explorerOpenRect(PROJECTS_WINDOW_SIZE.width, PROJECTS_WINDOW_SIZE.height)
+        : isExperience
+          ? explorerOpenRect(EXPERIENCE_WINDOW_SIZE.width, EXPERIENCE_WINDOW_SIZE.height)
+          : isHobbies
+            ? explorerOpenRect(HOBBIES_WINDOW_SIZE.width, HOBBIES_WINDOW_SIZE.height)
+            : isNotes
+              ? explorerOpenRect(NOTES_WINDOW_SIZE.width, NOTES_WINDOW_SIZE.height)
+              : centerRect();
+    const cascadeN =
+      isResume || isProjects || isExperience || isHobbies || isNotes ? 0 : cascadeCountRef.current;
+    if (!isResume && !isProjects && !isExperience && !isHobbies && !isNotes) cascadeCountRef.current = cascadeN + 1;
     const finalRect = {
       x: clamp(base.x + cascadeN * 24, 0, Math.max(0, desktopArea.width - base.width)),
       y: clamp(base.y + cascadeN * 24, 0, Math.max(0, desktopArea.height - base.height)),
       width: base.width,
       height: base.height,
     };
+
+    const resumeRestore = (): LocalWin["restore"] => ({
+      position: {
+        x: clamp(
+          Math.round((desktopArea.width - RESUME_WINDOW_SIZE.width) / 2),
+          0,
+          Math.max(0, desktopArea.width - RESUME_WINDOW_SIZE.width)
+        ),
+        y: clamp(
+          Math.round((desktopArea.height - RESUME_WINDOW_SIZE.height) / 2),
+          0,
+          Math.max(0, desktopArea.height - RESUME_WINDOW_SIZE.height)
+        ),
+      },
+      size: { ...RESUME_WINDOW_SIZE },
+    });
 
     setSelectedIconId(iconId);
     setOpeningRect({ x: iconX, y: iconY, width: ICON_SIZE, height: ICON_SIZE, visible: true });
@@ -437,7 +458,8 @@ export default function DesktopPage() {
             size: { width: finalRect.width, height: finalRect.height },
             zIndex: nextZ,
             minimized: false,
-            maximized: false,
+            maximized: isResume,
+            ...(isResume ? { restore: resumeRestore() } : {}),
           },
         ]);
         setFocusedWindowId(iconId);
@@ -471,21 +493,32 @@ export default function DesktopPage() {
   if (currentOS !== "windows95") {
     const isXP = currentOS === "windowsxp";
     const isW10 = currentOS === "windows10";
-    const isMac = currentOS === "macos";
-    const taskbarOrDockHeight = isMac ? 64 : isW10 ? 40 : 30;
-    const topInset = isMac ? 24 : 0;
+    const taskbarOrDockHeight = isW10 ? 40 : 30;
+    const topInset = 0;
     const desktopBg = isXP
       ? "radial-gradient(120% 80% at 50% -10%, #a7dcff 0%, #87CEEB 42%, #5B9BD5 100%)"
-      : isW10
-        ? "radial-gradient(circle at 70% 50%, #1a3a6b 0%, #10284a 35%, #0a1628 75%)"
-        : "#1E1E1E";
+      : "radial-gradient(circle at 70% 50%, #1a3a6b 0%, #10284a 35%, #0a1628 75%)";
 
-    const iconSize = isW10 ? 48 : isMac ? 52 : 32;
+    const iconSize = isW10 ? 48 : 32;
     const iconLabelSelectedBg = isXP
       ? "rgba(10,36,106,0.7)"
-      : isW10
-        ? "rgba(0,120,215,0.65)"
-        : "rgba(10,132,255,0.6)";
+      : "rgba(0,120,215,0.65)";
+
+    const resumeRestoreRectThemed = () => ({
+      position: {
+        x: clamp(
+          Math.round((desktopArea.width - RESUME_WINDOW_SIZE.width) / 2),
+          0,
+          Math.max(0, desktopArea.width - RESUME_WINDOW_SIZE.width)
+        ),
+        y: clamp(
+          Math.round((desktopArea.height - RESUME_WINDOW_SIZE.height) / 2),
+          0,
+          Math.max(0, desktopArea.height - RESUME_WINDOW_SIZE.height)
+        ),
+      },
+      size: { width: RESUME_WINDOW_SIZE.width, height: RESUME_WINDOW_SIZE.height },
+    });
 
     const openFromIcon = (iconId: string) => {
       if (iconId === "settings") {
@@ -493,10 +526,64 @@ export default function DesktopPage() {
         return;
       }
       setSelectedIconIdNon95(iconId);
+      if (iconId === "resume") {
+        themedOpenWindow("resume", {
+          maximized: true,
+          restoreRect: resumeRestoreRectThemed(),
+        });
+        return;
+      }
+      if (iconId === "projects") {
+        const r = explorerOpenRect(PROJECTS_WINDOW_SIZE.width, PROJECTS_WINDOW_SIZE.height);
+        themedOpenWindow("projects", {
+          position: { x: r.x, y: r.y },
+          size: { width: r.width, height: r.height },
+        });
+        return;
+      }
+      if (iconId === "experience") {
+        const r = explorerOpenRect(EXPERIENCE_WINDOW_SIZE.width, EXPERIENCE_WINDOW_SIZE.height);
+        themedOpenWindow("experience", {
+          position: { x: r.x, y: r.y },
+          size: { width: r.width, height: r.height },
+        });
+        return;
+      }
+      if (iconId === "hobbies") {
+        const r = explorerOpenRect(HOBBIES_WINDOW_SIZE.width, HOBBIES_WINDOW_SIZE.height);
+        themedOpenWindow("hobbies", {
+          position: { x: r.x, y: r.y },
+          size: { width: r.width, height: r.height },
+        });
+        return;
+      }
+      if (iconId === "notes") {
+        const r = explorerOpenRect(NOTES_WINDOW_SIZE.width, NOTES_WINDOW_SIZE.height);
+        themedOpenWindow("notes", {
+          position: { x: r.x, y: r.y },
+          size: { width: r.width, height: r.height },
+        });
+        return;
+      }
       themedOpenWindow(iconId);
     };
 
     const renderContent = (id: string) => {
+      if (id === "welcome") {
+        return (
+          <WelcomeWindow
+            theme={currentOS}
+            onClose={() => themedCloseWindow("welcome")}
+            onOpenResume={() => {
+              themedCloseWindow("welcome");
+              themedOpenWindow("resume", {
+                maximized: true,
+                restoreRect: resumeRestoreRectThemed(),
+              });
+            }}
+          />
+        );
+      }
       if (id === "resume") {
         return (
           <iframe
@@ -506,23 +593,98 @@ export default function DesktopPage() {
           />
         );
       }
-      if (id === "hobbies") {
+      if (id === "about") {
+        return <AboutWindow />;
+      }
+      if (id === "projects") {
         return (
-          <div style={{ width: "100%", height: "100%", overflowY: "auto", background: "#fff", padding: 8, boxSizing: "border-box" }}>
-            {[
-              ["photography", "street, nature, anything that looks interesting. (@joofpics on instagram)"],
-              ["the gym", "not a science based lifter (sorry not sorry)"],
-              ["piano", "self taught, not very good but i try to have fun"],
-              ["sports", "avid toronto raptors jamal shead fan"],
-              ["building things", "a lot of unfinished projects haha"],
-            ].map(([name, detail]) => (
-              <div key={name} style={{ marginBottom: 8, fontFamily: '"IBM Plex Mono", monospace', fontSize: 10, color: "#333" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#000" }}>{name}</div>
-                <div>{detail}</div>
-              </div>
-            ))}
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              minHeight: 0,
+              boxSizing: "border-box",
+              background: "#FFFFFF",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+              fontFamily: '"IBM Plex Mono", monospace',
+            }}
+          >
+            <div
+              style={{
+                flex: 1,
+                minHeight: 0,
+                overflow: "auto",
+                padding: 12,
+                boxSizing: "border-box",
+              }}
+            >
+              <ProjectsExplorerContent />
+            </div>
           </div>
         );
+      }
+      if (id === "experience") {
+        return (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              minHeight: 0,
+              boxSizing: "border-box",
+              background: "#FFFFFF",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+              fontFamily: '"IBM Plex Mono", monospace',
+            }}
+          >
+            <div
+              style={{
+                flex: 1,
+                minHeight: 0,
+                overflow: "auto",
+                padding: 12,
+                boxSizing: "border-box",
+              }}
+            >
+              <ExperienceExplorerContent />
+            </div>
+          </div>
+        );
+      }
+      if (id === "hobbies") {
+        return (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              minHeight: 0,
+              boxSizing: "border-box",
+              background: "#FFFFFF",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+              fontFamily: '"IBM Plex Mono", monospace',
+            }}
+          >
+            <div
+              style={{
+                flex: 1,
+                minHeight: 0,
+                overflow: "auto",
+                padding: 12,
+                boxSizing: "border-box",
+              }}
+            >
+              <HobbiesExplorerContent />
+            </div>
+          </div>
+        );
+      }
+      if (id === "notes") {
+        return <GuestbookWindow theme={currentOS} />;
       }
       return (
         <div style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: 11, color: "#000000", padding: 8 }}>
@@ -542,60 +704,16 @@ export default function DesktopPage() {
         }}
         data-theme-cursor={currentOS}
       >
-        <style>{`
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
           [data-theme-cursor="windowsxp"], [data-theme-cursor="windowsxp"] * { cursor: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIiBzaGFwZS1yZW5kZXJpbmc9ImNyaXNwRWRnZXMiPjxwYXRoIGZpbGw9IiNmZmYiIHN0cm9rZT0iIzAwMCIgZD0iTTEgMXYyMGw1LTUgNCA4IDMtMS00LTggNyAxeiIvPjwvc3ZnPg==") 0 0, auto; }
           [data-theme-cursor="windowsxp"] button, [data-theme-cursor="windowsxp"] [role="button"] { cursor: pointer; }
           [data-theme-cursor="windows10"], [data-theme-cursor="windows10"] * { cursor: default; }
           [data-theme-cursor="windows10"] button, [data-theme-cursor="windows10"] [role="button"] { cursor: pointer; }
-          [data-theme-cursor="macos"], [data-theme-cursor="macos"] * { cursor: default; }
-          [data-theme-cursor="macos"] button, [data-theme-cursor="macos"] [role="button"] { cursor: pointer; }
-        `}</style>
-        {isMac ? (
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              top: 0,
-              height: 24,
-              background: "rgba(30,30,30,0.85)",
-              borderBottom: "1px solid #3A3A3A",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "0 10px",
-              boxSizing: "border-box",
-              zIndex: 30,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 11 }}>
-              <svg
-                width={(14 * 814) / 1000}
-                height={14}
-                viewBox="0 0 814 1000"
-                fill="none"
-                aria-hidden
-              >
-                <path
-                  fill="#FFFFFF"
-                  d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.2 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 70.1 0 128.4 46.2 172.5 46.2 42.8 0 109.6-49 191.4-49 30.9 0 108.2 2.6 168.1 75.4zm-216.6-25.7c-6.5-34.5-18.2-78.1-45.6-113.6-22.4-29.2-58.5-52.7-96.9-52.7-2.6 0-5.2.3-7.8.6 2.6 36.1 18.2 79.7 46.2 115.9 25 32.6 63.8 58.5 104.1 49.8z"
-                />
-              </svg>
-              <span>Finder</span>
-              <span>File</span>
-              <span>Edit</span>
-              <span>View</span>
-              <span>Go</span>
-              <span>Window</span>
-              <span>Help</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11 }}>
-              <svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 6a6 6 0 0 1 12 0" stroke="#fff"/><path d="M4 8a4 4 0 0 1 8 0" stroke="#fff"/></svg>
-              <svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="5" width="10" height="6" stroke="#fff"/><rect x="12" y="7" width="2" height="2" fill="#fff"/></svg>
-              <span>{clockText}</span>
-            </div>
-          </div>
-        ) : null}
+        `,
+          }}
+        />
 
         <div
           ref={desktopAreaRef}
@@ -695,15 +813,13 @@ export default function DesktopPage() {
           </div>
 
           {ICONS.map((icon) => {
-            const pos = iconPositions[icon.id];
-            const x = Math.round((desktopArea.width * pos.leftPct) / 100);
-            const y = Math.round((desktopArea.height * pos.topPct) / 100);
+            const pt = DESKTOP_ICON_PX[icon.id] ?? { left: 24, top: 24 };
             const selected = selectedIconIdNon95 === icon.id;
 
             return (
               <div
                 key={icon.id}
-                style={{ position: "absolute", left: x, top: y, width: isMac ? 80 : 96, userSelect: "none" }}
+                style={{ position: "absolute", left: pt.left, top: pt.top, width: 96, userSelect: "none" }}
                 onPointerDown={(e) => {
                   e.stopPropagation();
                   openFromIcon(icon.id);
@@ -729,8 +845,8 @@ export default function DesktopPage() {
                 >
                   <div
                     style={{
-                      width: isMac ? 52 : iconSize,
-                      height: isMac ? 52 : iconSize,
+                      width: iconSize,
+                      height: iconSize,
                       background: "transparent",
                       borderRadius: 0,
                       display: "flex",
@@ -738,17 +854,12 @@ export default function DesktopPage() {
                       justifyContent: "center",
                     }}
                   >
-                    {isMac ? (
-                      <MacDesktopAppIcon id={icon.id} />
-                    ) : (
-                      <DesktopIconSvg kind={icon.iconKind} selected={false} scale={32} theme={currentOS} />
-                    )}
+                    <DesktopIconSvg kind={icon.iconKind} selected={false} scale={32} theme={currentOS} />
                   </div>
                   <div
                     style={{
                       marginTop: 4,
                       fontSize: 11,
-                      fontFamily: isMac ? '"IBM Plex Mono", monospace' : undefined,
                       color: "#fff",
                       textAlign: "center",
                       background: selected ? iconLabelSelectedBg : "transparent",
@@ -897,59 +1008,17 @@ export default function DesktopPage() {
           </div>
         ) : null}
 
-        {isMac ? (
-          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 64, background: "rgba(40,40,40,0.7)", borderTop: "1px solid #3A3A3A", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, zIndex: 20 }}>
-            {ICONS.map((icon) => {
-              const open = themedOpenWindows.some((w) => w.id === icon.id && !w.minimized);
-              return (
-                <div key={icon.id} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                  <motion.button
-                    type="button"
-                    whileHover={{ scale: 1.4 }}
-                    onClick={() => {
-                      if (icon.id === "settings") setSettingsOpen((v) => !v);
-                      else openFromIcon(icon.id);
-                    }}
-                    style={{
-                      width: 52,
-                      height: 52,
-                      borderRadius: 12,
-                      background: "transparent",
-                      border: 0,
-                      padding: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <MacDesktopAppIcon id={icon.id} />
-                  </motion.button>
-                  {open ? <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#fff", marginTop: 3 }} /> : null}
-                </div>
-              );
-            })}
-          </div>
-        ) : null}
-
         {settingsOpen ? (
-          <div style={{ position: "absolute", right: 12, bottom: (isMac ? 70 : taskbarOrDockHeight + 8), zIndex: 40 }}>
+          <div
+            style={{
+              position: "absolute",
+              left: 2,
+              bottom: taskbarOrDockHeight + 2,
+              zIndex: 99999,
+            }}
+          >
             <SettingsPanel onClose={() => setSettingsOpen(false)} />
           </div>
-        ) : null}
-
-        {showBoot ? (
-          <motion.div
-            style={{ position: "absolute", inset: 0 }}
-            initial={false}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3, ease: "linear" }}
-          >
-            <BootSequence
-              key={currentOS}
-              os={currentOS}
-              onComplete={() => setBootComplete(true)}
-            />
-          </motion.div>
         ) : null}
       </div>
     );
@@ -966,7 +1035,9 @@ export default function DesktopPage() {
       data-win95-cursor-scope={currentOS === "windows95" ? "true" : "false"}
     >
       {currentOS === "windows95" ? (
-        <style>{`
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
           [data-win95-cursor-scope="true"],
           [data-win95-cursor-scope="true"] * {
             cursor: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIiBzaGFwZS1yZW5kZXJpbmc9ImNyaXNwRWRnZXMiPjxwYXRoIGZpbGw9IiNmZmYiIHN0cm9rZT0iIzAwMCIgZD0iTTEgMXYyMGw1LTUgNCA4IDMtMS00LTggNyAxeiIvPjwvc3ZnPg==") 0 0, auto !important;
@@ -985,7 +1056,9 @@ export default function DesktopPage() {
           [data-win95-cursor-scope="true"] [style*="cursor: move"] {
             cursor: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIiBzaGFwZS1yZW5kZXJpbmc9ImNyaXNwRWRnZXMiPjxwYXRoIGZpbGw9IiNmZmYiIHN0cm9rZT0iIzAwMCIgZD0iTTE2IDJsMyAzaC0ydjloOVYxMmwzIDMtMyAzdi0yaC05djloMmwtMyAzLTMtM2gydi05SDV2MmwtMy0zIDMtM3YyaDlWNWgtMnoiLz48L3N2Zz4=") 16 16, move !important;
           }
-        `}</style>
+        `,
+          }}
+        />
       ) : null}
       {/* Desktop area (excludes taskbar) */}
       <div
@@ -1021,6 +1094,45 @@ export default function DesktopPage() {
                   onMaximize={() => maximizeWindow(win.id)}
                   onMove={(x, y) => moveWindow(win.id, x, y)}
                 />
+              ) : win.id === "about" ? (
+                <Window
+                  key={win.id}
+                  win={win}
+                  desktopConstraintsRef={desktopAreaRef}
+                  onFocus={() => focusWindow(win.id)}
+                  onClose={() => closeWindow(win.id)}
+                  onMinimize={() => minimizeWindow(win.id)}
+                  onMaximize={() => maximizeWindow(win.id)}
+                  onMove={(x, y) => moveWindow(win.id, x, y)}
+                >
+                  <AboutWindow />
+                </Window>
+              ) : win.id === "projects" ? (
+                <ProjectsWindow
+                  key={win.id}
+                  win={win}
+                  desktopConstraintsRef={desktopAreaRef}
+                  onFocus={() => focusWindow(win.id)}
+                  onClose={() => {
+                    closeWindow(win.id);
+                  }}
+                  onMinimize={() => minimizeWindow(win.id)}
+                  onMaximize={() => maximizeWindow(win.id)}
+                  onMove={(x, y) => moveWindow(win.id, x, y)}
+                />
+              ) : win.id === "experience" ? (
+                <ExperienceWindow
+                  key={win.id}
+                  win={win}
+                  desktopConstraintsRef={desktopAreaRef}
+                  onFocus={() => focusWindow(win.id)}
+                  onClose={() => {
+                    closeWindow(win.id);
+                  }}
+                  onMinimize={() => minimizeWindow(win.id)}
+                  onMaximize={() => maximizeWindow(win.id)}
+                  onMove={(x, y) => moveWindow(win.id, x, y)}
+                />
               ) : win.id === "hobbies" ? (
                 <HobbiesWindow
                   key={win.id}
@@ -1034,6 +1146,39 @@ export default function DesktopPage() {
                   onMaximize={() => maximizeWindow(win.id)}
                   onMove={(x, y) => moveWindow(win.id, x, y)}
                 />
+              ) : win.id === "notes" ? (
+                <Window
+                  key={win.id}
+                  win={win}
+                  desktopConstraintsRef={desktopAreaRef}
+                  onFocus={() => focusWindow(win.id)}
+                  onClose={() => closeWindow(win.id)}
+                  onMinimize={() => minimizeWindow(win.id)}
+                  onMaximize={() => maximizeWindow(win.id)}
+                  onMove={(x, y) => moveWindow(win.id, x, y)}
+                >
+                  <GuestbookWindow theme="windows95" />
+                </Window>
+              ) : win.id === "welcome" ? (
+                <Window
+                  key={win.id}
+                  win={win}
+                  desktopConstraintsRef={desktopAreaRef}
+                  onFocus={() => focusWindow(win.id)}
+                  onClose={() => closeWindow(win.id)}
+                  onMinimize={() => minimizeWindow(win.id)}
+                  onMaximize={() => maximizeWindow(win.id)}
+                  onMove={(x, y) => moveWindow(win.id, x, y)}
+                >
+                  <WelcomeWindow
+                    theme="windows95"
+                    onClose={() => closeWindow("welcome")}
+                    onOpenResume={() => {
+                      closeWindow("welcome");
+                      startOpenAnimationAndOpen("resume");
+                    }}
+                  />
+                </Window>
               ) : (
                 <Window
                   key={win.id}
@@ -1069,9 +1214,7 @@ export default function DesktopPage() {
 
         {/* Desktop icons */}
         {ICONS.map((icon) => {
-          const pos = iconPositions[icon.id];
-          const iconX = Math.round((desktopArea.width * pos.leftPct) / 100);
-          const iconY = Math.round((desktopArea.height * pos.topPct) / 100);
+          const pt = DESKTOP_ICON_PX[icon.id] ?? { left: 0, top: 0 };
           const isSelected = selectedIconId === icon.id;
 
           return (
@@ -1079,8 +1222,8 @@ export default function DesktopPage() {
               key={icon.id}
               style={{
                 position: "absolute",
-                left: iconX,
-                top: iconY,
+                left: pt.left,
+                top: pt.top,
                 width: 96,
                 userSelect: "none",
               }}
@@ -1263,7 +1406,6 @@ function ThemedWindow({
 }) {
   const isXP = theme === "windowsxp";
   const isW10 = theme === "windows10";
-  const isMac = theme === "macos";
   const dragControls = useDragControls();
   const [xpHoverBtn, setXpHoverBtn] = useState<"min" | "max" | "close" | null>(null);
   const [xpPressedBtn, setXpPressedBtn] = useState<"min" | "max" | "close" | null>(null);
@@ -1273,15 +1415,9 @@ function ThemedWindow({
     ? {
         border: "3px solid #0A246A",
       }
-    : isW10
-      ? {
-          border: focused ? "1px solid #0078D7" : "1px solid #3A3A3A",
-        }
-      : {
-          borderRadius: 10,
-          boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
-          border: "1px solid #3A3A3A",
-        };
+    : {
+        border: focused ? "1px solid #0078D7" : "1px solid #3A3A3A",
+      };
 
   return (
     <motion.div
@@ -1294,11 +1430,13 @@ function ThemedWindow({
         zIndex: win.zIndex,
         background: isW10 ? "#FFFFFF" : "#ECE9D8",
         overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
         ...baseBorder,
       }}
       drag
       dragControls={dragControls}
-      dragListener={!isXP && !isW10}
+      dragListener={false}
       dragConstraints={desktopConstraintsRef}
       dragElastic={0}
       onPointerDown={() => {
@@ -1314,33 +1452,24 @@ function ThemedWindow({
           }
         }}
         style={{
-          height: isXP ? 30 : isW10 ? 32 : 28,
+          height: isXP ? 30 : 32,
           background: isXP
             ? "linear-gradient(to right, #0A246A, #3A88C8)"
-            : isW10
-              ? focused
-                ? "#FFFFFF"
-                : "#F0F0F0"
-              : "#2A2A2A",
+            : focused
+              ? "#FFFFFF"
+              : "#F0F0F0",
           color: isW10 ? "#000000" : "#fff",
           display: "flex",
           alignItems: "center",
-          justifyContent: isMac ? "space-between" : "flex-start",
-          borderRadius: isMac ? "10px 10px 0 0" : isXP ? "6px 6px 0 0" : 0,
+          justifyContent: "flex-start",
+          borderRadius: isXP ? "6px 6px 0 0" : 0,
           fontFamily: '"IBM Plex Mono", monospace',
           fontSize: 11,
           boxSizing: "border-box",
           borderTop: isXP ? "1px solid #5BAEE8" : "none",
         }}
       >
-        {isMac ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 8 }}>
-            <button type="button" onClick={onClose} style={{ width: 12, height: 12, borderRadius: "50%", border: "1px solid #E0443E", background: "#FF5F57" }} />
-            <button type="button" onClick={onMinimize} style={{ width: 12, height: 12, borderRadius: "50%", border: "1px solid #D4A017", background: "#FEBC2E" }} />
-            <button type="button" onClick={onMaximize} style={{ width: 12, height: 12, borderRadius: "50%", border: "1px solid #1DAD2B", background: "#28C840" }} />
-          </div>
-        ) : (
-          <>
+        <>
             <div style={{ width: 16, height: 16, marginLeft: isXP ? 6 : isW10 ? 8 : 4, background: "#888" }} />
             <div style={{ marginLeft: isW10 ? 12 : 8, fontWeight: isXP ? 700 : 500, color: isW10 ? "#000000" : isW10 && !focused ? "#888888" : "#FFFFFF" }}>
               {win.title}
@@ -1443,11 +1572,7 @@ function ThemedWindow({
                 ✕
               </button>
             </div>
-          </>
-        )}
-        {isMac ? (
-          <div style={{ position: "absolute", left: 0, right: 0, textAlign: "center", color: "#CCCCCC", pointerEvents: "none" }}>{win.title}</div>
-        ) : null}
+        </>
       </div>
       {isXP ? (
         <div style={{ height: 20, background: "#ECE9D8", borderBottom: "1px solid #ACA899", display: "flex", alignItems: "center", gap: 12, paddingLeft: 6, fontFamily: '"IBM Plex Mono", monospace', fontSize: 10 }}>
@@ -1456,10 +1581,14 @@ function ThemedWindow({
       ) : null}
       <div
         style={{
-          height: `calc(100% - ${isXP ? 50 : isW10 ? 32 : 28}px)`,
+          flex: 1,
+          minHeight: 0,
           background: "#FFFFFF",
           border: isXP ? "1px solid #ACA899" : "none",
           boxSizing: "border-box",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         {children}
@@ -1717,146 +1846,12 @@ function StartFlagIcon() {
   );
 }
 
-const MAC_DESKTOP_ICON_BOX: CSSProperties = {
-  width: 52,
-  height: 52,
-  borderRadius: 12,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  boxSizing: "border-box",
-  overflow: "hidden",
-  flexShrink: 0,
-};
-
-function MacDesktopAppIcon({ id }: { id: string }) {
-  switch (id) {
-    case "about":
-      return (
-        <div style={{ ...MAC_DESKTOP_ICON_BOX, background: "#0A84FF" }}>
-          <span
-            style={{
-              fontFamily: "Georgia, serif",
-              fontWeight: 700,
-              fontSize: 28,
-              color: "#FFFFFF",
-              lineHeight: 1,
-            }}
-          >
-            i
-          </span>
-        </div>
-      );
-    case "projects":
-      return (
-        <div style={{ ...MAC_DESKTOP_ICON_BOX, background: "#5E5CE6" }}>
-          <svg width={30} height={26} viewBox="0 0 30 26" fill="none" aria-hidden>
-            <path
-              d="M3 10 L3 23 L27 23 L27 11 L13 11 L11 9 L3 9 Z"
-              stroke="#FFFFFF"
-              strokeWidth={1.6}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              fill="none"
-            />
-            <path
-              d="M3 9 V7 h7 l2 2"
-              stroke="#FFFFFF"
-              strokeWidth={1.6}
-              fill="none"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-          </svg>
-        </div>
-      );
-    case "experience":
-      return (
-        <div style={{ ...MAC_DESKTOP_ICON_BOX, background: "#FF9F0A" }}>
-          <svg width={30} height={28} viewBox="0 0 30 28" fill="none" aria-hidden>
-            <path
-              d="M9 11 V9 C9 7.2 10.3 6 12 6 h6 C19.7 6 21 7.2 21 9 v2"
-              stroke="#FFFFFF"
-              strokeWidth={1.6}
-              fill="none"
-              strokeLinecap="round"
-            />
-            <rect x={5} y={11} width={20} height={14} rx={1.5} stroke="#FFFFFF" strokeWidth={1.6} fill="none" />
-            <path d="M5 14 h20" stroke="#FFFFFF" strokeWidth={1.3} strokeLinecap="round" />
-          </svg>
-        </div>
-      );
-    case "education":
-      return (
-        <div style={{ ...MAC_DESKTOP_ICON_BOX, background: "#30D158" }}>
-          <svg width={34} height={28} viewBox="0 0 34 28" aria-hidden>
-            <polygon points="17,6 4,12 30,12" fill="#FFFFFF" />
-            <rect x="4" y="12" width="26" height="4" fill="#FFFFFF" />
-            <line x1="17" y1="16" x2="17" y2="22" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" />
-            <circle cx="17" cy="23" r="2" fill="#FFFFFF" />
-          </svg>
-        </div>
-      );
-    case "resume":
-      return (
-        <div style={{ ...MAC_DESKTOP_ICON_BOX, background: "#FF3B30" }}>
-          <svg width={28} height={32} viewBox="0 0 28 32" fill="none" aria-hidden>
-            <rect x="5" y="4" width="18" height="24" rx={1} stroke="#FFFFFF" strokeWidth={1.5} fill="none" />
-            <path d="M17 4 L23 4 L23 10 L17 10 Z" fill="#FFFFFF" />
-            <line x1="8" y1="15" x2="20" y2="15" stroke="#FFFFFF" strokeWidth={1.2} strokeLinecap="round" />
-            <line x1="8" y1="19" x2="20" y2="19" stroke="#FFFFFF" strokeWidth={1.2} strokeLinecap="round" />
-            <line x1="8" y1="23" x2="17" y2="23" stroke="#FFFFFF" strokeWidth={1.2} strokeLinecap="round" />
-          </svg>
-        </div>
-      );
-    case "contact":
-      return (
-        <div style={{ ...MAC_DESKTOP_ICON_BOX, background: "#32ADE6" }}>
-          <svg width={32} height={24} viewBox="0 0 32 24" fill="none" aria-hidden>
-            <rect x="3" y="5" width="26" height="16" rx={1} stroke="#FFFFFF" strokeWidth={1.5} fill="none" />
-            <path
-              d="M3 5 L16 14 L29 5"
-              stroke="#FFFFFF"
-              strokeWidth={1.5}
-              strokeLinejoin="round"
-              fill="none"
-              strokeLinecap="round"
-            />
-          </svg>
-        </div>
-      );
-    case "hobbies":
-      return (
-        <div style={{ ...MAC_DESKTOP_ICON_BOX, background: "#FF2D55" }}>
-          <svg width={28} height={26} viewBox="0 0 28 26" aria-hidden>
-            <path
-              fill="#FFFFFF"
-              d="M14 23 C6 17 2 13 2 8 C2 5 4 3 7 3 C9.5 3 11.5 4.5 13 6.5 C14.5 4.5 16.5 3 19 3 C22 3 24 5 24 8 C24 13 20 17 12 23 Z"
-            />
-          </svg>
-        </div>
-      );
-    case "settings":
-      return (
-        <div style={{ ...MAC_DESKTOP_ICON_BOX, background: "#3A3A3C" }}>
-          <svg width={30} height={30} viewBox="0 0 24 24" aria-hidden>
-            <path
-              fill="#FFFFFF"
-              d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.495.495 0 0 0-.59.22l-1.92 3.32c-.12.21-.07.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-1.97-1.58zm-7.14 2.66a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"
-            />
-            <circle cx="12" cy="12" r="3.5" fill="#3A3A3C" />
-          </svg>
-        </div>
-      );
-    default:
-      return <div style={{ ...MAC_DESKTOP_ICON_BOX, background: "#3A3A3C" }} />;
-  }
-}
-
-function iconKindFromId(id: string): "folder" | "file" | "envelope" | "control" {
+function iconKindFromId(id: string): "folder" | "file" | "envelope" | "control" | "notepad" {
   if (id === "about" || id === "projects" || id === "experience" || id === "education" || id === "hobbies") return "folder";
   if (id === "resume") return "file";
   if (id === "contact") return "envelope";
+  if (id === "notes") return "notepad";
+  if (id === "welcome") return "file";
   return "control";
 }
 
@@ -1866,7 +1861,7 @@ function DesktopIconSvg({
   scale,
   theme,
 }: {
-  kind: "folder" | "file" | "envelope" | "control";
+  kind: "folder" | "file" | "envelope" | "control" | "notepad";
   selected: boolean;
   scale: 16 | 24 | 32 | 48;
   theme?: OSName;
@@ -1878,6 +1873,19 @@ function DesktopIconSvg({
     shapeRendering: "crispEdges" as const,
     xmlns: "http://www.w3.org/2000/svg",
   };
+
+  if (kind === "notepad") {
+    return (
+      <svg {...common}>
+        <rect x="3" y="5" width="26" height="24" fill="#FFFFFF" stroke="#000000" strokeWidth="1" />
+        <rect x="4" y="6" width="24" height="5" fill="#FFFF00" />
+        <rect x="4" y="11" width="24" height="17" fill="#FFFFFF" />
+        <line x1="6" y1="14" x2="26" y2="14" stroke="#000000" strokeWidth="1" />
+        <line x1="6" y1="18" x2="22" y2="18" stroke="#000000" strokeWidth="1" />
+        <line x1="6" y1="22" x2="20" y2="22" stroke="#000000" strokeWidth="1" />
+      </svg>
+    );
+  }
 
   if (theme === "windows10") {
     if (kind === "folder") {

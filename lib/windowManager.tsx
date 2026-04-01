@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type WindowPos = { x: number; y: number };
 export type WindowSize = { width: number; height: number };
@@ -32,6 +32,26 @@ export function useWindowManager({
   const [focusedWindowId, setFocusedWindowId] = useState<string | null>(null);
 
   const nextZRef = useRef(10);
+
+  useEffect(() => {
+    const dw = Math.max(1, desktopArea.width);
+    const dh = Math.max(1, desktopArea.height);
+    setOpenWindows((prev) =>
+      prev.map((w) =>
+        w.maximized
+          ? {
+              ...w,
+              position: { x: 0, y: 0 },
+              size: {
+                width: dw,
+                height: dh,
+              },
+            }
+          : w
+      )
+    );
+  }, [desktopArea.width, desktopArea.height]);
+
   const savedRectsRef = useRef<
     Record<
       string,
@@ -62,12 +82,94 @@ export function useWindowManager({
   }, []);
 
   const openWindow = useCallback(
-    (id: string) => {
+    (
+      id: string,
+      opts?: {
+        position?: WindowPos;
+        size?: WindowSize;
+        maximized?: boolean;
+        restoreRect?: { position: WindowPos; size: WindowSize };
+      }
+    ) => {
       const title = windowTitles[id] ?? id;
 
-      const initialRect = (() => {
-        const position = getCenteredPosition();
-        return { position, size: { ...defaultWindowSize } };
+      if (opts?.maximized) {
+        const dw = Math.max(1, desktopArea.width);
+        const dh = Math.max(1, desktopArea.height);
+        const restore =
+          opts.restoreRect ??
+          (() => {
+            const sz = { ...defaultWindowSize };
+            const cx = Math.round((dw - sz.width) / 2);
+            const cy = Math.round((dh - sz.height) / 2);
+            return {
+              position: {
+                x: clamp(cx, 0, Math.max(0, dw - sz.width)),
+                y: clamp(cy, 0, Math.max(0, dh - sz.height)),
+              },
+              size: sz,
+            };
+          })();
+        savedRectsRef.current[id] = restore;
+
+        setOpenWindows((prev) => {
+          const existing = prev.find((w) => w.id === id);
+          const nextZ = nextZRef.current + 1;
+          nextZRef.current = nextZ;
+
+          if (existing) {
+            return prev.map((w) => {
+              if (w.id !== id) return w;
+              return {
+                ...w,
+                minimized: false,
+                maximized: true,
+                zIndex: nextZ,
+                position: { x: 0, y: 0 },
+                size: { width: dw, height: dh },
+              };
+            });
+          }
+
+          return [
+            ...prev,
+            {
+              id,
+              title,
+              position: { x: 0, y: 0 },
+              size: { width: dw, height: dh },
+              zIndex: nextZ,
+              minimized: false,
+              maximized: true,
+            },
+          ];
+        });
+
+        setFocusedWindowId(id);
+        return;
+      }
+
+      const dw = Math.max(1, desktopArea.width);
+      const dh = Math.max(1, desktopArea.height);
+      const rawSize = opts?.size ?? { ...defaultWindowSize };
+      const size: WindowSize = {
+        width: clamp(rawSize.width, 100, dw),
+        height: clamp(rawSize.height, 80, dh),
+      };
+
+      const position = (() => {
+        if (opts?.position) {
+          return {
+            x: clamp(opts.position.x, 0, Math.max(0, dw - size.width)),
+            y: clamp(opts.position.y, 0, Math.max(0, dh - size.height)),
+          };
+        }
+        const cx = Math.round((dw - size.width) / 2);
+        const cy = Math.round((dh - size.height) / 2);
+        return {
+          x: clamp(cx, 0, Math.max(0, dw - size.width)),
+          y: clamp(cy, 0, Math.max(0, dh - size.height)),
+        };
       })();
 
       setOpenWindows((prev) => {
@@ -78,10 +180,26 @@ export function useWindowManager({
         if (existing) {
           return prev.map((w) => {
             if (w.id !== id) return w;
+            const nextSize = opts?.size
+              ? {
+                  width: clamp(opts.size.width, 100, dw),
+                  height: clamp(opts.size.height, 80, dh),
+                }
+              : w.size;
+            const px =
+              opts?.position != null ? opts.position.x : w.position.x;
+            const py =
+              opts?.position != null ? opts.position.y : w.position.y;
+            const nextPos = {
+              x: clamp(px, 0, Math.max(0, dw - nextSize.width)),
+              y: clamp(py, 0, Math.max(0, dh - nextSize.height)),
+            };
             return {
               ...w,
               minimized: false,
               zIndex: nextZ,
+              size: nextSize,
+              position: nextPos,
             };
           });
         }
@@ -91,8 +209,8 @@ export function useWindowManager({
           {
             id,
             title,
-            position: initialRect.position,
-            size: initialRect.size,
+            position,
+            size,
             zIndex: nextZ,
             minimized: false,
             maximized: false,
@@ -102,7 +220,7 @@ export function useWindowManager({
 
       setFocusedWindowId(id);
     },
-    [defaultWindowSize, getCenteredPosition, windowTitles]
+    [defaultWindowSize, desktopArea.height, desktopArea.width, windowTitles]
   );
 
   const closeWindow = useCallback((id: string) => {
@@ -142,10 +260,9 @@ export function useWindowManager({
         const nextZ = nextZRef.current + 1;
         nextZRef.current = nextZ;
 
-        const areaSize: WindowSize = {
-          width: desktopArea.width,
-          height: desktopArea.height,
-        };
+        const dw = Math.max(1, desktopArea.width);
+        const dh = Math.max(1, desktopArea.height);
+        const areaSize: WindowSize = { width: dw, height: dh };
 
         return prev.map((w) => {
           if (w.id !== id) return w;

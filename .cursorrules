@@ -6,13 +6,13 @@ Rules — enforce strictly on every file:
 - No glassmorphism, no box shadows except OS-accurate ones
 - No generic card grids, no hero sections, no startup aesthetics
 - Default font everywhere: IBM Plex Mono
-- Four OS themes: Windows95, WindowsXP, Windows10, MacOS
+- Three OS themes: Windows95, WindowsXP, Windows10
 - OS theme is global state in lib/osContext.tsx, switchable at any time
 - All windows are draggable via framer-motion
 - Window chrome (title bar, borders, buttons) comes from the active OS theme
 - Content components (AboutWindow, ProjectsWindow etc.) are OS-agnostic
 - Content components receive styling tokens from the active OS theme, never hardcode colors
-- OSPicker.tsx is the entry point — minimal, near-black background, four OS choices, small note saying "you can change this later"
+- OSPicker.tsx is the entry point — minimal, near-black background, three OS choices, small note saying "you can change this later"
 - SettingsPanel.tsx is accessible from within any OS desktop to switch themes
 - Desktop icons represent files: about, projects, experience, education, resume, contact
 - Clicking a desktop icon opens a draggable window with that content

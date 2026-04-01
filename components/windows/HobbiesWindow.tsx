@@ -123,7 +123,145 @@ const HOBBIES = [
     subtitle: "i like to make fun stuff",
     detail: "a lot of unfinished projects haha",
   },
+  {
+    name: "fashion",
+    subtitle: "i like to wear what i like",
+    detail: "",
+  },
 ] as const;
+
+/** Shared explorer body — same data and Win95-style explorer layout on every OS; outer window chrome differs. */
+export function HobbiesExplorerContent() {
+  return (
+    <>
+      <div
+        style={{
+          background: "#C0C0C0",
+          borderBottom: "1px solid #808080",
+          padding: "4px 8px",
+          fontFamily,
+          fontSize: 10,
+          color: "#555555",
+          lineHeight: "12px",
+          textTransform: "lowercase",
+          boxSizing: "border-box",
+        }}
+      >
+        c:\hobbies\index — 6 items found
+      </div>
+
+      {HOBBIES.map((hobby) => (
+        <div
+          key={hobby.name}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            padding: "10px 8px",
+            borderBottom: "1px solid #E0E0E0",
+            boxSizing: "border-box",
+          }}
+        >
+          <div
+            style={{
+              width: 180,
+              flexShrink: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+            }}
+          >
+            <FolderIcon24 />
+            <div
+              style={{
+                marginTop: 4,
+                fontFamily,
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#000000",
+                lineHeight: "13px",
+                textTransform: "lowercase",
+              }}
+            >
+              {hobby.name}
+            </div>
+            <div
+              style={{
+                marginTop: 2,
+                fontFamily,
+                fontSize: 10,
+                color: "#555555",
+                lineHeight: "12px",
+                textTransform: "lowercase",
+              }}
+            >
+              {hobby.subtitle}
+            </div>
+          </div>
+
+          {hobby.detail ? (
+            <div
+              style={{
+                flex: "1 1 auto",
+                padding: "0 16px",
+                minWidth: 0,
+              }}
+            >
+              <div
+                style={{
+                  fontFamily,
+                  fontSize: 10,
+                  color: "#333333",
+                  lineHeight: "13px",
+                  maxWidth: 340,
+                  textTransform: "lowercase",
+                }}
+              >
+                {hobby.detail}
+              </div>
+            </div>
+          ) : null}
+
+          <div
+            style={{
+              flexShrink: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <div
+              style={{
+                width: 160,
+                height: 120,
+                background: "#D8D8D8",
+                border: "1px solid #A0A0A0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxSizing: "border-box",
+              }}
+            >
+              <PhotoPlaceholderIcon />
+            </div>
+            <div
+              style={{
+                marginTop: 4,
+                fontFamily,
+                fontSize: 9,
+                color: "#AAAAAA",
+                lineHeight: "11px",
+                textAlign: "center",
+                textTransform: "lowercase",
+              }}
+            >
+              [ add photo ]
+            </div>
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
 
 export default function HobbiesWindow({
   win,
@@ -331,131 +469,15 @@ export default function HobbiesWindow({
             style={{
               width: "100%",
               height: "100%",
+              minHeight: 0,
               background: "#FFFFFF",
               padding: 12,
               boxSizing: "border-box",
-              overflowY: "auto",
+              overflow: "auto",
               fontFamily,
             }}
           >
-            <div
-              style={{
-                background: "#C0C0C0",
-                borderBottom: "1px solid #808080",
-                padding: "4px 8px",
-                fontFamily,
-                fontSize: 10,
-                color: "#555555",
-                lineHeight: "12px",
-              }}
-            >
-              c:\hobbies\index — 5 items found
-            </div>
-
-            {HOBBIES.map((hobby) => (
-              <div
-                key={hobby.name}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "10px 8px",
-                  borderBottom: "1px solid #E0E0E0",
-                }}
-              >
-                <div
-                  style={{
-                    width: 180,
-                    flexShrink: 0,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                  }}
-                >
-                  <FolderIcon24 />
-                  <div
-                    style={{
-                      marginTop: 4,
-                      fontFamily,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: "#000000",
-                      lineHeight: "13px",
-                      textTransform: "lowercase",
-                    }}
-                  >
-                    {hobby.name}
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 2,
-                      fontFamily,
-                      fontSize: 10,
-                      color: "#555555",
-                      lineHeight: "12px",
-                      textTransform: "lowercase",
-                    }}
-                  >
-                    {hobby.subtitle}
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    flex: "1 1 auto",
-                    padding: "0 16px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontFamily,
-                      fontSize: 10,
-                      color: "#333333",
-                      lineHeight: "13px",
-                      maxWidth: 340,
-                      textTransform: "lowercase",
-                    }}
-                  >
-                    {hobby.detail}
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    flexShrink: 0,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 160,
-                      height: 120,
-                      background: "#D8D8D8",
-                      border: "1px solid #A0A0A0",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      boxSizing: "border-box",
-                    }}
-                  >
-                    <PhotoPlaceholderIcon />
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 4,
-                      fontFamily,
-                      fontSize: 9,
-                      color: "#AAAAAA",
-                      lineHeight: "11px",
-                      textAlign: "center",
-                    }}
-                  >
-                    [ add photo ]
-                  </div>
-                </div>
-              </div>
-            ))}
+            <HobbiesExplorerContent />
           </div>
         </div>
       </div>
