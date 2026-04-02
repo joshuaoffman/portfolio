@@ -96,8 +96,9 @@ export default function GuestbookWindow({ theme }: GuestbookWindowProps) {
   const [profanityMsg, setProfanityMsg] = useState<string | null>(null);
   const [btnHover, setBtnHover] = useState(false);
 
-  const fetchComments = useCallback(async () => {
-    setLoading(true);
+  const fetchComments = useCallback(async (opts?: { showListLoading?: boolean }) => {
+    const showListLoading = opts?.showListLoading !== false;
+    if (showListLoading) setLoading(true);
     try {
       const res = await fetch("/api/comments");
       if (!res.ok) throw new Error("fetch failed");
@@ -106,7 +107,7 @@ export default function GuestbookWindow({ theme }: GuestbookWindowProps) {
     } catch {
       setComments([]);
     } finally {
-      setLoading(false);
+      if (showListLoading) setLoading(false);
     }
   }, []);
 
@@ -134,17 +135,15 @@ export default function GuestbookWindow({ theme }: GuestbookWindowProps) {
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (res.status === 400 && typeof data.error === "string") {
         setProfanityMsg(data.error);
-        setSubmitting(false);
         return;
       }
       if (!res.ok) {
         if (typeof data.error === "string") setProfanityMsg(data.error);
-        setSubmitting(false);
         return;
       }
       setName("");
       setMessage("");
-      await fetchComments();
+      await fetchComments({ showListLoading: false });
     } finally {
       setSubmitting(false);
     }

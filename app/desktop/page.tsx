@@ -264,6 +264,9 @@ export default function DesktopPage() {
     defaultWindowSize: { width: 700, height: 550 },
   });
 
+  const themedOpenWindowRef = useRef(themedOpenWindow);
+  themedOpenWindowRef.current = themedOpenWindow;
+
   useEffect(() => {
     if (currentOS === "windows95") return;
     themedClampAllWindowsToDesktop();
@@ -329,11 +332,11 @@ export default function DesktopPage() {
         });
         setFocusedWindowId("welcome");
       } else {
-        themedOpenWindow("welcome", { position: pos, size: welcomeSize });
+        themedOpenWindowRef.current("welcome", { position: pos, size: welcomeSize });
       }
     }, 600);
     return () => window.clearTimeout(t);
-  }, [bootComplete, currentOS, desktopArea.height, desktopArea.width, themedOpenWindow, windowTitles.welcome]);
+  }, [bootComplete, currentOS, desktopArea.height, desktopArea.width, windowTitles.welcome]);
 
   /** Centered window that never exceeds the desktop area (explorer-style windows). */
   const explorerOpenRect = (targetWidth: number, targetHeight: number) => {

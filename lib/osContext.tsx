@@ -21,10 +21,6 @@ export function OSProvider({ children }: { children: ReactNode }) {
 
   useLayoutEffect(() => {
     const stored = window.sessionStorage.getItem("activeOS");
-    if (stored === "macos") {
-      window.sessionStorage.removeItem("activeOS");
-      return;
-    }
     if (stored === "windows95" || stored === "windowsxp" || stored === "windows10") {
       setActiveOSState(stored);
     }
